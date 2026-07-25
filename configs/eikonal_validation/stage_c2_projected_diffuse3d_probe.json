@@ -1,7 +1,7 @@
 {
   "Name": "stage_c2_projected_diffuse3d_probe",
   "Objective": "Compact zero-shot projected-diffuse 3D probe for frozen baseline_minimal_v1 q/SWS models.",
-  "AdaptiveReqRoot": "/Users/sara/local/adaptive_req_local",
+  "AdaptiveReqRoot": "/Users/sara/local/req-ml",
   "WaveSimProjectRoot": "/Users/sara/local/wave_sim_project_clean",
   "ModelBundlePath": "outputs/baseline_minimal_v1/models/baseline_minimal_v1_q_models.mat",
   "OutputRoot": "outputs/eikonal_validation/stage_c2_projected_diffuse3d_probe",
