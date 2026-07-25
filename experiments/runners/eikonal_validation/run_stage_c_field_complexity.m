@@ -18,8 +18,8 @@ format compact;
 this_file = mfilename('fullpath');
 root_dir = fileparts(fileparts(fileparts(fileparts(this_file))));
 addpath(root_dir);
-root_dir = setup_adaptive_req();
-adaptive_req.templates.setup_style();
+root_dir = setup_reqml();
+reqml.templates.setup_style();
 set(groot,'defaultAxesFontSize',8,'defaultTextFontSize',8, ...
     'defaultLegendFontSize',7,'defaultAxesTitleFontSizeMultiplier',1.0);
 
@@ -570,14 +570,14 @@ end
 end
 
 function [F, D] = extract_req_feature_table(sim, C, CFG, baseFeatures)
-feat = adaptive_req.config.default_feature_config('M', C.M, ...
+feat = reqml.config.default_feature_config('M', C.M, ...
     'cs_guess', CFG.REQ.cs_guess, 'gamma_win', CFG.REQ.Gamma, ...
     'pad_factor', CFG.REQ.PadFactor);
 reqCfg = struct('f0', C.f0, 'dx', CFG.Simulation.dx_m, 'dz', CFG.Simulation.dz_m, ...
     'cs_bg', C.background_sws);
 stepX = max(1, round(CFG.REQ.TargetStepM / CFG.Simulation.dx_m));
 stepZ = max(1, round(CFG.REQ.TargetStepM / CFG.Simulation.dz_m));
-O = adaptive_req.estimators.req_estimator_map(sim.Uxz, reqCfg, feat, ...
+O = reqml.estimators.req_estimator_map(sim.Uxz, reqCfg, feat, ...
     'StepX', stepX, 'StepZ', stepZ, ...
     'EdgeMode', char(CFG.REQ.EdgeMode), 'QuantileMode', 'local_req', ...
     'ReqOptions', {'Nbins', char(CFG.REQ.Nbins), ...
@@ -848,7 +848,7 @@ function y = q_to_sws(mappings, q, f0)
 y = nan(numel(q),1);
 for i = 1:numel(q)
     fi = f0(i);
-    y(i) = adaptive_req.quantile.quantile_to_cs(mappings{i}, q(i), fi);
+    y(i) = reqml.quantile.quantile_to_cs(mappings{i}, q(i), fi);
 end
 end
 

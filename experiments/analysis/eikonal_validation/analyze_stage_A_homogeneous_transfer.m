@@ -11,8 +11,8 @@ format compact;
 this_file = mfilename('fullpath');
 root_dir = fileparts(fileparts(fileparts(fileparts(this_file))));
 addpath(root_dir);
-root_dir = setup_adaptive_req();
-adaptive_req.templates.setup_style();
+root_dir = setup_reqml();
+reqml.templates.setup_style();
 set(groot,'defaultAxesFontSize',9,'defaultTextFontSize',9, ...
     'defaultLegendFontSize',8,'defaultAxesTitleFontSizeMultiplier',1.05);
 
@@ -652,9 +652,9 @@ fprintf(fid, '- Representative field and prediction maps under `figures/maps_by_
 fprintf(fid, '- Source geometry diagnostics under `figures/source_geometry/`.\n');
 fprintf(fid, '- Central power spectra for diffuse-like layouts under `figures/central_power_spectra/`.\n\n');
 fprintf(fid, '## How To Run\n\n');
-fprintf(fid, 'Validation-only:\n\n```bash\ncd /Users/sara/local/adaptive_req_local\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''validate_only''); run(''experiments/runners/eikonal_validation/run_stage_A_homogeneous_transfer.m'')"\n```\n\n');
-fprintf(fid, 'Quick:\n\n```bash\ncd /Users/sara/local/adaptive_req_local\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''quick''); run(''experiments/runners/eikonal_validation/run_stage_A_homogeneous_transfer.m'')"\n```\n\n');
-fprintf(fid, 'Full runner and analysis:\n\n```bash\ncd /Users/sara/local/adaptive_req_local\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''full''); run(''experiments/runners/eikonal_validation/run_stage_A_homogeneous_transfer.m'')"\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''full''); run(''experiments/analysis/eikonal_validation/analyze_stage_A_homogeneous_transfer.m'')"\n```\n\n');
+fprintf(fid, 'Validation-only:\n\n```bash\ncd /Users/sara/local/req-ml\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''validate_only''); run(''experiments/runners/eikonal_validation/run_stage_A_homogeneous_transfer.m'')"\n```\n\n');
+fprintf(fid, 'Quick:\n\n```bash\ncd /Users/sara/local/req-ml\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''quick''); run(''experiments/runners/eikonal_validation/run_stage_A_homogeneous_transfer.m'')"\n```\n\n');
+fprintf(fid, 'Full runner and analysis:\n\n```bash\ncd /Users/sara/local/req-ml\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''full''); run(''experiments/runners/eikonal_validation/run_stage_A_homogeneous_transfer.m'')"\n/Applications/MATLAB_R2025a.app/bin/matlab -batch "setenv(''ADAPTIVE_REQ_EIKONAL_STAGE_A_MODE'',''full''); run(''experiments/analysis/eikonal_validation/analyze_stage_A_homogeneous_transfer.m'')"\n```\n\n');
 fprintf(fid, '## Approximate Runtime\n\n');
 fprintf(fid, 'Runtime is printed by the runner. Cached conditions are reused unless `ADAPTIVE_REQ_EIKONAL_STAGE_A_FORCE_REBUILD=true`. Full Stage A has 36 simulation conditions, each evaluated by two frozen models.\n\n');
 fprintf(fid, '## Results Summary\n\n');

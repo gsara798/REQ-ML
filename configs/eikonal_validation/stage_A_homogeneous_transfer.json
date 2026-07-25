@@ -1,7 +1,7 @@
 {
   "Name": "stage_A_homogeneous_transfer",
   "Objective": "Zero-shot transfer of frozen baseline_minimal_v1 models to clean homogeneous Eikonal simulations.",
-  "AdaptiveReqRoot": "/Users/sara/local/adaptive_req_local",
+  "AdaptiveReqRoot": "/Users/sara/local/req-ml",
   "WaveSimProjectRoot": "/Users/sara/local/wave_sim_project_clean",
   "ModelBundlePath": "outputs/baseline_minimal_v1/models/baseline_minimal_v1_q_models.mat",
   "OutputRoot": "outputs/eikonal_validation/stage_A_homogeneous_transfer",

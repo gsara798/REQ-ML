@@ -278,7 +278,7 @@ The next natural experiment is a two-pass or cs-guess sweep:
 From the local project root:
 
 ```bash
-cd /Users/sara/local/adaptive_req_local
+cd /Users/sara/local/req-ml
 ```
 
 Validation-only smoke test:

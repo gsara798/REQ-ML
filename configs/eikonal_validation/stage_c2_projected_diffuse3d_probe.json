@@ -1,0 +1,276 @@
+{
+  "Name": "stage_c2_projected_diffuse3d_probe",
+  "Objective": "Compact zero-shot projected-diffuse 3D probe for frozen baseline_minimal_v1 q/SWS models.",
+  "AdaptiveReqRoot": "/Users/sara/local/req-ml",
+  "WaveSimProjectRoot": "/Users/sara/local/wave_sim_project_clean",
+  "ModelBundlePath": "outputs/baseline_minimal_v1/models/baseline_minimal_v1_q_models.mat",
+  "OutputRoot": "outputs/eikonal_validation/stage_c2_projected_diffuse3d_probe",
+  "FrequenciesHz": [
+    300,
+    400,
+    500,
+    600
+  ],
+  "RealismLevels": [
+    "clean"
+  ],
+  "FieldRegimes": [
+    "single_source_lateral",
+    "diffuse_like_4src_layoutA",
+    "diffuse_like_8src_layoutA",
+    "diffuse_like_16src_layoutA",
+    "diffuse_like_4src_layoutB",
+    "diffuse_like_8src_layoutB",
+    "diffuse_like_16src_layoutB",
+    "balanced_projected_diffuse_3D_32src",
+    "balanced_projected_diffuse_3D_64src"
+  ],
+  "MList": [
+    2
+  ],
+  "Simulation": {
+    "Lx_m": 0.07,
+    "Lz_m": 0.07,
+    "dx_m": 0.0002,
+    "dz_m": 0.0002,
+    "PhaseModel": "eikonal3D_projected",
+    "Eikonal3D": {
+      "dy_m": 0.0025,
+      "YMarginM": 0.005,
+      "MaxIterations": 80,
+      "Tolerance": 2e-6,
+      "BoundaryInitialization": "all_faces_3d_time",
+      "NormalizeBoundaryTime": false
+    },
+    "GeometricDecayPower": 0.5,
+    "MeasurementPlaneY_m": 0.0,
+    "MeasurementAxis": [
+      0,
+      0,
+      1
+    ],
+    "MotionDirection": [
+      0,
+      0,
+      1
+    ],
+    "AmplitudeNormalization": "central_rms_to_one",
+    "NormalizeFieldAmplitude": true,
+    "ValidRegionMarginM": 0.01,
+    "FibonacciShellRadiusM": 0.075
+  },
+  "Geometries": [
+    {
+      "id": "homogeneous_cs3",
+      "type": "homogeneous",
+      "background_sws": 3.0,
+      "inclusion_sws": 3.0,
+      "inclusion_diameter_mm": 0
+    },
+    {
+      "id": "homogeneous_cs4",
+      "type": "homogeneous",
+      "background_sws": 4.0,
+      "inclusion_sws": 4.0,
+      "inclusion_diameter_mm": 0
+    },
+    {
+      "id": "inclusion_2_4_D24",
+      "type": "inclusion",
+      "background_sws": 2.0,
+      "inclusion_sws": 4.0,
+      "inclusion_diameter_mm": 24
+    }
+  ],
+  "REQ": {
+    "cs_guess": 3.0,
+    "TargetStepM": 0.0005,
+    "EdgeMode": "valid",
+    "Nbins": "auto",
+    "Nbins_min": 16,
+    "Nbins_auto_oversample": 1,
+    "smooth_sigma": 1,
+    "Gamma": 1,
+    "PadFactor": 1
+  },
+  "ROI": {
+    "CoreMinDistanceMm": 4.0,
+    "BackgroundFarMinDistanceMm": 8.0,
+    "HomogeneousCenterHalfWidthMm": 12.0,
+    "InterfaceBandsMm": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        4,
+        8
+      ]
+    ]
+  },
+  "SpectrumDiagnostics": {
+    "WindowSizeMm": 32,
+    "AngularBins": 36,
+    "RadialBins": 48,
+    "LowKExcludeFraction": 0.06
+  },
+  "RunModes": {
+    "validate_only": {
+      "Geometries": [
+        "homogeneous_cs3"
+      ],
+      "FrequenciesHz": [
+        400
+      ],
+      "FieldRegimes": [
+        "single_source_lateral",
+        "balanced_projected_diffuse_3D_32src"
+      ],
+      "MList": [
+        2
+      ]
+    },
+    "quick": {
+      "Geometries": [
+        "homogeneous_cs4",
+        "inclusion_2_4_D24"
+      ],
+      "FrequenciesHz": [
+        400
+      ],
+      "FieldRegimes": [
+        "single_source_lateral",
+        "diffuse_like_16src_layoutA",
+        "balanced_projected_diffuse_3D_32src",
+        "balanced_projected_diffuse_3D_64src"
+      ],
+      "MList": [
+        2
+      ]
+    },
+    "full": {
+      "Geometries": [
+        "homogeneous_cs3",
+        "homogeneous_cs4",
+        "inclusion_2_4_D24"
+      ],
+      "FrequenciesHz": [
+        300,
+        400,
+        500,
+        600
+      ],
+      "FieldRegimes": [
+        "single_source_lateral",
+        "diffuse_like_4src_layoutA",
+        "diffuse_like_8src_layoutA",
+        "diffuse_like_16src_layoutA",
+        "diffuse_like_4src_layoutB",
+        "diffuse_like_8src_layoutB",
+        "diffuse_like_16src_layoutB",
+        "balanced_projected_diffuse_3D_32src",
+        "balanced_projected_diffuse_3D_64src"
+      ],
+      "MList": [
+        2
+      ]
+    }
+  },
+  "SourceLayouts": {
+    "single_source_lateral": {
+      "source_seed": 0,
+      "phase_seed": 0,
+      "description": "One in-plane source left of the x-z domain at y=0."
+    },
+    "diffuse_like_4src_layoutA": {
+      "source_seed": 6704,
+      "phase_seed": 6704,
+      "N_sources": 4,
+      "N_in_plane": 1,
+      "layout_family": "A",
+      "description": "Four-source shell layout with one in-plane source."
+    },
+    "diffuse_like_8src_layoutA": {
+      "source_seed": 6708,
+      "phase_seed": 6708,
+      "N_sources": 8,
+      "N_in_plane": 1,
+      "layout_family": "A",
+      "description": "Eight-source shell layout with one in-plane source."
+    },
+    "diffuse_like_16src_layoutA": {
+      "source_seed": 6716,
+      "phase_seed": 6716,
+      "N_sources": 16,
+      "N_in_plane": 1,
+      "layout_family": "A",
+      "description": "Sixteen-source shell layout with one in-plane source."
+    },
+    "diffuse_like_4src_layoutB": {
+      "source_seed": 6804,
+      "phase_seed": 6804,
+      "N_sources": 4,
+      "N_in_plane": 1,
+      "layout_family": "B",
+      "description": "Four-source practical layout with one in-plane source."
+    },
+    "diffuse_like_8src_layoutB": {
+      "source_seed": 6808,
+      "phase_seed": 6808,
+      "N_sources": 8,
+      "N_in_plane": 2,
+      "layout_family": "B",
+      "description": "Eight-source practical layout with two in-plane sources."
+    },
+    "diffuse_like_16src_layoutB": {
+      "source_seed": 6816,
+      "phase_seed": 6816,
+      "N_sources": 16,
+      "N_in_plane": 4,
+      "layout_family": "B",
+      "description": "Sixteen-source practical layout with four in-plane sources."
+    },
+    "balanced_projected_diffuse_3D_32src": {
+      "source_seed": 32032,
+      "phase_seed": 32032,
+      "N_sources": 32,
+      "N_in_plane": 6,
+      "layout_family": "fibonacci",
+      "shell_radius_m": 0.075,
+      "description": "Fibonacci sphere shell with six forced in-plane sources."
+    },
+    "balanced_projected_diffuse_3D_64src": {
+      "source_seed": 64064,
+      "phase_seed": 64064,
+      "N_sources": 64,
+      "N_in_plane": 8,
+      "layout_family": "fibonacci",
+      "shell_radius_m": 0.075,
+      "description": "Fibonacci sphere shell with eight forced in-plane sources."
+    }
+  },
+  "Figures": {
+    "SaveRepresentativeMaps": true,
+    "RepresentativeGeometries": [
+      "homogeneous_cs4",
+      "inclusion_2_4_D24"
+    ],
+    "RepresentativeFrequenciesHz": [
+      400
+    ],
+    "RepresentativeFieldRegimes": [
+      "single_source_lateral",
+      "diffuse_like_16src_layoutA",
+      "balanced_projected_diffuse_3D_64src"
+    ],
+    "SaveSourceGeometry": true
+  }
+}

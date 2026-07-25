@@ -11,8 +11,8 @@ format compact;
 this_file = mfilename('fullpath');
 root_dir = fileparts(fileparts(fileparts(this_file)));
 addpath(root_dir);
-root_dir = setup_adaptive_req();
-adaptive_req.templates.setup_style();
+root_dir = setup_reqml();
+reqml.templates.setup_style();
 
 CFG = analysis_config(root_dir);
 OUT = output_dirs(root_dir, CFG);

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+# req-ml
+=======
 # Adaptive REQ
+>>>>>>> origin/main
 
 Research-oriented MATLAB toolbox for **adaptive radial energy-quantile (REQ) estimation** and local shear-wave-speed mapping in harmonic shear-wave elastography.
 
@@ -6,7 +10,16 @@ This repository contains reusable analysis functions, experiment runners, config
 
 > **Research status:** this is active research software. Interfaces, model definitions, and experiment organization may change before the first stable release. The code is not intended for clinical use or medical decision-making.
 
+<<<<<<< HEAD
+- `src/`: reusable adaptive REQ MATLAB functions.
+- `experiments/`: experiment runners and analysis scripts.
+- `configs/`: JSON configuration files for reproducible runs.
+- `docs/`: documentation and result summaries.
+- `archive/`: selected archived scripts/docs from earlier project stages.
+- `setup_reqml.m`: MATLAB setup helper.
+=======
 ## Method overview
+>>>>>>> origin/main
 
 REQ estimates a representative local wavenumber from the cumulative radial energy of a windowed wavefield patch. Starting from the local radial spectrum, the normalized cumulative energy is
 
@@ -72,7 +85,12 @@ cd adaptive_req_local
 Then initialize the MATLAB path:
 
 ```matlab
+<<<<<<< HEAD
+cd('/Users/sara/local/req-ml')
+run('setup_reqml.m')
+=======
 root_dir = setup_adaptive_req();
+>>>>>>> origin/main
 ```
 
 The setup function adds the repository's `src/` directory to the MATLAB path and returns the resolved project root. No machine-specific absolute path is required.
