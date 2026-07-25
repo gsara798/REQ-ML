@@ -6,6 +6,6 @@ Runner: `experiments/runners/eikonal_validation/run_stage_B_resolution_phantom.m
 
 Analysis: `experiments/analysis/eikonal_validation/analyze_stage_B_resolution_phantom.m`
 
-Config: `/Users/sara/local/adaptive_req_local/configs/eikonal_validation/stage_B_resolution_phantom.json`
+Config: `/Users/sara/local/req-ml/configs/eikonal_validation/stage_B_resolution_phantom.json`
 
 Outputs: `outputs/eikonal_validation/stage_B_resolution_phantom/`

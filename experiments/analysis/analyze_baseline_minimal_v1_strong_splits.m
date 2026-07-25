@@ -11,8 +11,8 @@ format compact;
 this_file = mfilename('fullpath');
 root_dir = fileparts(fileparts(fileparts(this_file)));
 addpath(root_dir);
-root_dir = setup_adaptive_req();
-adaptive_req.templates.setup_style();
+root_dir = setup_reqml();
+reqml.templates.setup_style();
 set(groot,'defaultAxesFontSize',8,'defaultTextFontSize',8, ...
     'defaultLegendFontSize',7,'defaultAxesTitleFontSizeMultiplier',1.05);
 

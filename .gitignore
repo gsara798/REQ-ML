@@ -47,3 +47,4 @@ codegen/
 *.tmp
 *.corrupt_*
 
+**/.DS_Store

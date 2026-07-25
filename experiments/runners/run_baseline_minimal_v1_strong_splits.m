@@ -30,8 +30,8 @@ format compact;
 this_file = mfilename('fullpath');
 root_dir = fileparts(fileparts(fileparts(this_file)));
 addpath(root_dir);
-root_dir = setup_adaptive_req();
-adaptive_req.templates.setup_style();
+root_dir = setup_reqml();
+reqml.templates.setup_style();
 
 CFG = default_config(root_dir);
 OUT = make_output_dirs(root_dir, CFG);
@@ -555,7 +555,7 @@ function y = q_to_sws(mappings, q, f0)
 y = nan(numel(q),1);
 for i = 1:numel(q)
     if isscalar(f0), fi = f0; else, fi = f0(i); end
-    y(i) = adaptive_req.quantile.quantile_to_cs(mappings{i}, q(i), fi);
+    y(i) = reqml.quantile.quantile_to_cs(mappings{i}, q(i), fi);
 end
 end
 

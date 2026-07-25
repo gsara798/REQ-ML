@@ -1,7 +1,7 @@
 {
   "Name": "stage_c_field_complexity",
   "Objective": "Zero-shot clean Eikonal field-complexity transfer validation for frozen baseline_minimal_v1 q/SWS models.",
-  "AdaptiveReqRoot": "/Users/sara/local/adaptive_req_local",
+  "AdaptiveReqRoot": "/Users/sara/local/req-ml",
   "WaveSimProjectRoot": "/Users/sara/local/wave_sim_project_clean",
   "ModelBundlePath": "outputs/baseline_minimal_v1/models/baseline_minimal_v1_q_models.mat",
   "OutputRoot": "outputs/eikonal_validation/stage_c_field_complexity",

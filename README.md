@@ -1,4 +1,4 @@
-# adaptive_req_local
+# req-ml
 
 Local MATLAB workspace for the regenerated adaptive REQ baseline and Eikonal validation line.
 
@@ -11,7 +11,7 @@ This repository tracks the maintainable project code:
 - `configs/`: JSON configuration files for reproducible runs.
 - `docs/`: documentation and result summaries.
 - `archive/`: selected archived scripts/docs from earlier project stages.
-- `setup_adaptive_req.m`: MATLAB setup helper.
+- `setup_reqml.m`: MATLAB setup helper.
 
 Generated outputs are intentionally ignored by git because they can be very large.
 
@@ -29,6 +29,6 @@ The `outputs/` folder is local-only. It contains models, cached simulations, fig
 In MATLAB:
 
 ```matlab
-cd('/Users/sara/local/adaptive_req_local')
-run('setup_adaptive_req.m')
+cd('/Users/sara/local/req-ml')
+run('setup_reqml.m')
 ```
