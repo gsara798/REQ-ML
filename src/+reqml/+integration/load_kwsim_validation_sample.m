@@ -1,5 +1,13 @@
 function data = load_kwsim_validation_sample(sample_file)
-%LOAD_KWSIM_VALIDATION_SAMPLE Load and validate a KWSIM REQ sample.
+%LOAD_KWSIM_VALIDATION_SAMPLE Load the deprecated legacy KWSIM REQ sample.
+%
+% DEPRECATED:
+%   Active REQ-ML workflows must use
+%   reqml.integration.load_wavefield_sample instead.
+%
+% This loader is retained temporarily only to validate migration from
+% historical req_validation_sample.mat artifacts. It should not be used by
+% new experiments, training pipelines, or production inference.
 %
 % The input file must contain:
 %
