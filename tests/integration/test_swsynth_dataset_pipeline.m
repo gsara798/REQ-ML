@@ -1,0 +1,182 @@
+function tests = test_swsynth_dataset_pipeline
+%TEST_SWSYNTH_DATASET_PIPELINE End-to-end swsynth -> REQ-ML dataset test.
+
+tests = functiontests(localfunctions);
+
+end
+
+function setupOnce(testCase)
+
+reqml_root = fileparts(fileparts(fileparts( ...
+    mfilename("fullpath"))));
+
+framework_root = ...
+    "/Users/sara/local/shear-wave-simulation-framework";
+
+addpath(fullfile(reqml_root, "src"));
+
+assumeTrue(testCase, ...
+    isfolder(fullfile(framework_root, "src")), ...
+    "Local shear-wave simulation framework was not found.");
+
+addpath(fullfile(framework_root, "src"));
+
+testCase.TestData.framework_src = ...
+    fullfile(framework_root, "src");
+
+end
+
+function teardownOnce(testCase)
+
+if isfield(testCase.TestData, "framework_src")
+    rmpath(testCase.TestData.framework_src);
+end
+
+end
+
+function testSwsynthProducesReqmlDatasetExamples(testCase)
+
+cfg = swsynth.defaultConfig();
+
+cfg.seed = 101;
+cfg.scenario = "reqml_dataset_integration_circle";
+
+cfg.domain.Lx_m = 0.05;
+cfg.domain.Lz_m = 0.05;
+cfg.domain.dx_m = 0.5e-3;
+cfg.domain.dz_m = 0.5e-3;
+
+cfg.medium.background_cs_m_s = 2.0;
+cfg.medium.objects = {
+    struct( ...
+        "type", "circle", ...
+        "cs_m_s", 4.0, ...
+        "center_xz_m", [0.025, 0.025], ...
+        "radius_m", 0.010, ...
+        "edge_sigma_m", 0)
+    };
+
+cfg.wavefield.frequency_hz = 500;
+
+cfg.propagation.model = "spherical_wave";
+
+cfg.directions.count = 16;
+cfg.directions.space = "two_dimensional";
+cfg.directions.sampling_method = "fibonacci";
+cfg.directions.require_in_plane = true;
+cfg.directions.support.type = "full_circle";
+cfg.directions.support.angle_range_2d_rad = [0, 2*pi];
+
+cfg.sources.phase_policy = "random_uniform";
+cfg.sources.amplitude_jitter_fraction = 0.05;
+
+cfg.noise.snr_db = Inf;
+cfg.execution.use_parallel = false;
+
+result = swsynth.run(cfg);
+
+sample_file = string(tempname) + ".mat";
+wavefield_sample = result.sample; %#ok<NASGU>
+save(sample_file, "wavefield_sample", "-v7.3");
+
+cleanup = onCleanup(@() delete_if_present(sample_file));
+
+data = reqml.integration.load_wavefield_sample(sample_file);
+
+readiness = reqml.integration.assess_req_readiness( ...
+    data, ...
+    CsGuessMPerS=3.0, ...
+    WindowWavelengths=2.0, ...
+    MinimumPlacementsPerAxis=3);
+
+verifyTrue(testCase, readiness.valid);
+
+feat_cfg = reqml.config.default_feature_config( ...
+    "M", 2, ...
+    "cs_guess", 3.0, ...
+    "gamma_win", 1.0, ...
+    "pad_factor", 1, ...
+    "smooth_sigma_2d", 1.0);
+
+dataset = reqml.datasets.extract_examples_from_sample( ...
+    data, ...
+    feat_cfg, ...
+    DatasetId="integration_swsynth_circle_v1", ...
+    SampleId="sample_000001", ...
+    StepX=4, ...
+    StepZ=4, ...
+    StoreReqCurves=false, ...
+    UseWindowParfor=false);
+
+examples = dataset.examples;
+variable_names = string(examples.Properties.VariableNames);
+
+verifyGreaterThan(testCase, height(examples), 0);
+
+verifyTrue(testCase, ...
+    all(ismember( ...
+        ["dataset_id", ...
+         "sample_id", ...
+         "example_id", ...
+         "q_local_req", ...
+         "truth_cs_center_m_s", ...
+         "truth_material_purity"], ...
+        variable_names)));
+
+verifyEqual(testCase, ...
+    size(data.wavefield_zx), ...
+    size(result.sample.wavefield.data_zx));
+
+verifyEqual(testCase, ...
+    data.wavefield_zx, ...
+    result.sample.wavefield.data_zx);
+
+verifyEqual(testCase, ...
+    data.truth.cs_m_s_zx, ...
+    result.sample.truth.cs_map_zx);
+
+verifyEqual(testCase, ...
+    numel(unique(examples.example_id)), ...
+    height(examples));
+
+verifyTrue(testCase, ...
+    any(examples.truth_cs_center_m_s == 2.0));
+
+verifyTrue(testCase, ...
+    any(examples.truth_cs_center_m_s == 4.0));
+
+verifyTrue(testCase, ...
+    any(examples.truth_material_purity == 1));
+
+verifyTrue(testCase, ...
+    any(examples.truth_material_purity < 1));
+
+feature_candidates = [
+    "radial_entropy"
+    "width_75_25_rel"
+    "ang_entropy"
+    "circ_var"
+    "ecum_width_80_rel"
+    ];
+
+verifyTrue(testCase, ...
+    any(ismember(feature_candidates, variable_names)));
+
+verifyTrue(testCase, ...
+    all(isfinite(examples.q_local_req)));
+
+verifyEqual(testCase, ...
+    dataset.sample_summary.example_count, ...
+    height(examples));
+
+clear cleanup
+
+end
+
+function delete_if_present(path_value)
+
+if isfile(path_value)
+    delete(path_value);
+end
+
+end
