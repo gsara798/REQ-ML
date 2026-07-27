@@ -147,6 +147,11 @@ data.truth.material_id_zx = material_id_zx;
 data.truth.valid_mask_zx = valid_mask_zx;
 data.validation = sample.validation;
 data.analysis_ready = resolve_analysis_ready(sample.validation);
+data.simulation_valid = resolve_simulation_valid(sample.validation);
+data.source_dimension = resolve_source_dimension(sample);
+data.extraction = resolve_optional_struct(sample, "extraction");
+data.propagation = resolve_optional_struct(sample, "propagation");
+data.sources = resolve_optional_struct(sample, "sources");
 data.provenance = sample.provenance;
 data.raw_sample = sample;
 
@@ -174,6 +179,54 @@ if any(increments <= 0) || max(abs(increments-spacing_m)) > tolerance
     error("reqml:NonuniformWavefieldCoordinates", ...
         "Axis %s is not uniformly sampled.", axis_name);
 end
+end
+
+function value = resolve_optional_struct(container, field_name)
+
+value = struct();
+
+if isstruct(container) && ...
+        isfield(container, field_name) && ...
+        isstruct(container.(field_name))
+    value = container.(field_name);
+end
+
+end
+
+function valid = resolve_simulation_valid(validation)
+
+valid = [];
+
+if isstruct(validation) && isfield(validation, "valid")
+    valid = logical(validation.valid);
+end
+
+end
+
+function source_dimension = resolve_source_dimension(sample)
+
+source_dimension = NaN;
+
+if isfield(sample, "propagation") && ...
+        isstruct(sample.propagation) && ...
+        isfield(sample.propagation, "source_dimension")
+
+    source_dimension = double( ...
+        sample.propagation.source_dimension);
+
+elseif isfield(sample, "generator") && ...
+        isstruct(sample.generator) && ...
+        isfield(sample.generator, "name") && ...
+        string(sample.generator.name) == "swsynth"
+
+    source_dimension = 2;
+end
+
+if ~isscalar(source_dimension)
+    error("reqml:InvalidWavefieldPropagation", ...
+        "propagation.source_dimension must be scalar.");
+end
+
 end
 
 function ready = resolve_analysis_ready(validation)
