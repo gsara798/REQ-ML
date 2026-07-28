@@ -3,8 +3,8 @@
   "schema_version": "1.0",
   "baseline_id": "homogeneous_control_v1",
   "dataset": {
-    "dataset_id": "homogeneous_projected3d_control_v2",
-    "examples_mat": "outputs/datasets/homogeneous_projected3d_control_v2/examples.mat",
+    "dataset_id": "homogeneous_projected3d_control",
+    "examples_mat": "outputs/datasets/homogeneous_projected3d_control/examples.mat",
     "target_column": "q_target_from_center_truth"
   },
   "split": {

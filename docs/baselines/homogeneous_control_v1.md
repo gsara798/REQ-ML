@@ -19,7 +19,7 @@ The baseline is intentionally compact. It establishes reusable contracts for:
 ## Dataset
 
 ```text
-homogeneous_projected3d_control_v2
+homogeneous_projected3d_control
 ```
 
 The dataset contains 300 homogeneous projected-3D simulations spanning:

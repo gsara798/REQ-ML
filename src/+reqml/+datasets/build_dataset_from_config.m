@@ -4,7 +4,7 @@ function dataset = build_dataset_from_config(config_file)
 % Usage:
 %
 %   dataset = reqml.datasets.build_dataset_from_config( ...
-%       "configs/datasets/homogeneous_projected3d_control_v3.json");
+%       "configs/datasets/homogeneous_projected3d_control.json");
 
 arguments
     config_file {mustBeTextScalar}
