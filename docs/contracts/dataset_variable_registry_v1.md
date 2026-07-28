@@ -70,3 +70,23 @@ Compatibility aliases and simulation truth remain non-trainable:
 
 Predictor selection therefore uses `trainable=true`, not `role=feature`.
 
+## Spatial and spectral discretization predictors
+
+The following discretization variables are trainable because they are known
+during inference and directly affect the sampled local spectrum:
+
+- `GRID_dx_m`;
+- `GRID_dz_m`;
+- `REQ_dkx_rad_m`;
+- `REQ_dkz_rad_m`;
+- `REQ_Nbins_effective`.
+
+`REQ_dkx_rad_m` and `REQ_dkz_rad_m` are the actual Fourier-grid spacings after
+window sizing and zero padding. They are preferable to a single scalar
+`delta_k` because anisotropic grids may produce different resolutions along x
+and z.
+
+These variables may be correlated with M, cs_guess, frequency, grid spacing,
+window size, and padding. Their inclusion is valid but should later be tested
+with ablation and redundancy analyses.
+

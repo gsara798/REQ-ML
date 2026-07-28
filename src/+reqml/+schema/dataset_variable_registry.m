@@ -82,12 +82,16 @@ diagnostic_names = [
     "M"
     "SIM_f0"
     "SIM_cs_bg"
-    "REQ_Nbins_effective"
     ];
 
 operational_context_names = [
     "REQ_M"
     "REQ_cs_guess_m_s"
+    "REQ_Nbins_effective"
+    "GRID_dx_m"
+    "GRID_dz_m"
+    "REQ_dkx_rad_m"
+    "REQ_dkz_rad_m"
     "campaign_frequency_hz"
     ];
 
@@ -140,6 +144,7 @@ if ismember(name, diagnostic_names)
     return
 end
 
+% Must be checked before the general campaign metadata rule.
 if ismember(name, operational_context_names)
     role = "metadata";
     source = "operational_configuration";

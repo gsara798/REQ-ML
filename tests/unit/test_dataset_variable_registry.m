@@ -24,6 +24,11 @@ examples.campaign_frequency_hz = [300; 500];
 examples.REQ_M = [2; 3];
 examples.M = [2; 3];
 examples.REQ_cs_guess_m_s = [2.5; 3.5];
+examples.REQ_Nbins_effective = [31; 61];
+examples.GRID_dx_m = [0.2e-3; 0.3e-3];
+examples.GRID_dz_m = [0.2e-3; 0.4e-3];
+examples.REQ_dkx_rad_m = [100; 80];
+examples.REQ_dkz_rad_m = [100; 60];
 examples.SIM_f0 = [300; 500];
 examples.SIM_cs_bg = [2; 4];
 examples.truth_cs_center_m_s = [2; 4];
@@ -52,6 +57,21 @@ verify_role(testCase, registry, ...
 
 verify_role(testCase, registry, ...
     "REQ_cs_guess_m_s", "metadata", true);
+
+verify_role(testCase, registry, ...
+    "REQ_Nbins_effective", "metadata", true);
+
+verify_role(testCase, registry, ...
+    "GRID_dx_m", "metadata", true);
+
+verify_role(testCase, registry, ...
+    "GRID_dz_m", "metadata", true);
+
+verify_role(testCase, registry, ...
+    "REQ_dkx_rad_m", "metadata", true);
+
+verify_role(testCase, registry, ...
+    "REQ_dkz_rad_m", "metadata", true);
 
 verify_role(testCase, registry, ...
     "M", "diagnostic", false);
