@@ -112,6 +112,10 @@ rows.cx = [3; 6];
 rows.cz = [3; 3];
 rows.q_local_req = [0.70; 0.80];
 rows.mock_feature = [1.2; 1.4];
+rows.req_mapping = {
+    fake_mapping()
+    fake_mapping()
+    };
 
 out = struct();
 out.feature_table = rows;
@@ -126,6 +130,7 @@ rows = table();
 rows.cx = 4;
 rows.cz = 3;
 rows.q_local_req = 0.75;
+rows.req_mapping = {fake_mapping()};
 
 out = struct();
 out.feature_table = rows;
@@ -133,3 +138,12 @@ out.half_win = 1;
 out.win_size = 3;
 
 end
+
+function mapping = fake_mapping()
+
+mapping = struct();
+mapping.k_cent = [0; 2000];
+mapping.Ecum = [0; 1];
+
+end
+

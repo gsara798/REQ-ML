@@ -383,6 +383,7 @@ if return_feature_table
     row.cs_pred = cs_i;
     row.REQ_M = feat_cfg.M;
     row.M = feat_cfg.M;
+    row.REQ_cs_guess_m_s = feat_cfg.cs_guess_used;
     row.SIM_f0 = cfg.f0;
     row.SIM_cs_bg = cfg.cs_bg;
     row.SIM_WaveModel = get_string_field(cfg, 'WaveModel', "");

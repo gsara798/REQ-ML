@@ -77,6 +77,10 @@ examples = attach_truth( ...
     data, ...
     estimator_out);
 
+examples = attach_center_truth_target( ...
+    examples, ...
+    data);
+
 examples = movevars( ...
     examples, ...
     ["dataset_id", "sample_id", "example_id"], ...
@@ -287,6 +291,76 @@ examples.truth_valid_fraction = truth_valid_fraction;
 
 end
 
+function examples = attach_center_truth_target( ...
+    examples, data)
+
+required_columns = [
+    "truth_cs_center_m_s"
+    "req_mapping"
+    ];
+
+for name = required_columns.'
+    if ~ismember( ...
+            name, ...
+            string(examples.Properties.VariableNames))
+        error("reqml:MissingCenterTruthTargetInput", ...
+            "Example table is missing '%s'.", ...
+            name);
+    end
+end
+
+n = height(examples);
+
+target_cs_center_m_s = ...
+    double(examples.truth_cs_center_m_s);
+
+target_k_center_rad_m = nan(n, 1);
+q_target_from_center_truth = nan(n, 1);
+target_valid = false(n, 1);
+
+for index = 1:n
+    cs_target = target_cs_center_m_s(index);
+
+    if ~isfinite(cs_target) || cs_target <= 0
+        continue
+    end
+
+    k_target = ...
+        2*pi*double(data.frequency_hz) / cs_target;
+
+    mapping = examples.req_mapping{index};
+
+    q_target = ...
+        reqml.quantile. ...
+        evaluate_quantile_at_wavenumber( ...
+            mapping, ...
+            k_target);
+
+    target_k_center_rad_m(index) = k_target;
+    q_target_from_center_truth(index) = q_target;
+
+    target_valid(index) = ...
+        isfinite(k_target) && ...
+        isfinite(q_target);
+end
+
+examples.target_cs_center_m_s = ...
+    target_cs_center_m_s;
+
+examples.target_k_center_rad_m = ...
+    target_k_center_rad_m;
+
+examples.q_target_from_center_truth = ...
+    q_target_from_center_truth;
+
+examples.target_valid = target_valid;
+
+examples.target_definition = ...
+    repmat("center_pixel_truth", n, 1);
+
+end
+
+
 function half_win = resolve_half_window(estimator_out)
 
 if isfield(estimator_out, "half_win")
@@ -315,7 +389,8 @@ summary = struct();
 summary.dataset_id = dataset_id;
 summary.sample_id = sample_id;
 summary.example_count = height(examples);
-summary.valid_example_count = sum(isfinite(examples.q_local_req));
+summary.valid_example_count = ...
+    sum(examples.target_valid);
 summary.frequency_hz = double(data.frequency_hz);
 summary.dx_m = double(data.dx_m);
 summary.dz_m = double(data.dz_m);
