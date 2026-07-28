@@ -119,6 +119,9 @@ dataset.examples = examples;
 dataset.feature_config = feat_cfg;
 dataset.build_config = make_build_config(options);
 
+dataset.summary = ...
+    reqml.datasets.summarize_dataset(dataset);
+
 dataset.manifest = make_manifest(dataset);
 
 if options.SaveOutputs
@@ -356,6 +359,14 @@ samples_path = fullfile( ...
     output_directory, ...
     "samples.csv");
 
+variable_registry_path = fullfile( ...
+    output_directory, ...
+    "variable_registry.csv");
+
+dataset_summary_path = fullfile( ...
+    output_directory, ...
+    "dataset_summary.json");
+
 manifest_path = fullfile( ...
     output_directory, ...
     "dataset_manifest.json");
@@ -372,6 +383,19 @@ writetable( ...
     samples_path, ...
     Delimiter=",");
 
+writetable( ...
+    dataset.summary.variable_registry, ...
+    variable_registry_path, ...
+    Delimiter=",");
+
+summary_for_json = ...
+    make_summary_json_serializable( ...
+        dataset.summary);
+
+write_json( ...
+    dataset_summary_path, ...
+    summary_for_json);
+
 write_json(manifest_path, dataset.manifest);
 
 paths = struct();
@@ -380,7 +404,39 @@ paths.examples = string(examples_path);
 paths.sample_summaries = ...
     string(sample_summaries_path);
 paths.samples = string(samples_path);
+paths.variable_registry = ...
+    string(variable_registry_path);
+paths.dataset_summary = ...
+    string(dataset_summary_path);
 paths.manifest = string(manifest_path);
+
+end
+
+function value = make_summary_json_serializable(summary)
+
+value = summary;
+
+table_fields = [
+    "variable_registry"
+    "role_counts"
+    "source_counts"
+    "feature_group_counts"
+    "examples_per_run"
+    "by_background_cs"
+    "by_frequency"
+    "by_direction_count"
+    ];
+
+for field_index = 1:numel(table_fields)
+    field_name = table_fields(field_index);
+
+    if isfield(value, field_name) && ...
+            istable(value.(field_name))
+        value.(field_name) = ...
+            table2struct( ...
+                value.(field_name));
+    end
+end
 
 end
 
