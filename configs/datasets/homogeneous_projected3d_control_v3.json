@@ -1,0 +1,43 @@
+{
+  "schema_name": "reqml_dataset_build_config",
+  "schema_version": "1.0",
+  "dataset_id": "homogeneous_projected3d_control_v3",
+  "campaign_runs_csv": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns/scientific/homogeneous_projected3d_clean_v1/campaign_runs.csv",
+  "require_backend": "swsynth",
+  "req": {
+    "M": 2,
+    "cs_guess_m_s": 3.0,
+    "gamma": 1.0,
+    "pad_factor": 1,
+    "smooth_sigma_2d": 1.0
+  },
+  "extraction": {
+    "minimum_placements_per_axis": 5,
+    "step_x": 8,
+    "step_z": 8,
+    "store_req_curves": false,
+    "use_window_parfor": true
+  },
+  "theory_class_mapping": [
+    {
+      "direction_count": 1,
+      "field_class": "SingleWave"
+    },
+    {
+      "direction_count": 4,
+      "field_class": "PartialDiffuse3D"
+    },
+    {
+      "direction_count": 8,
+      "field_class": "PartialDiffuse3D"
+    },
+    {
+      "direction_count": 32,
+      "field_class": "Diffuse3D"
+    },
+    {
+      "direction_count": 128,
+      "field_class": "Diffuse3D"
+    }
+  ]
+}

@@ -78,10 +78,17 @@ prediction_names = [
 
 diagnostic_names = [
     "q_local_req"
-    "q_theory_discrete"
     "M"
     "SIM_f0"
     "SIM_cs_bg"
+    ];
+
+theory_names = [
+    "theory_field_class"
+    "q_theory_single_wave_discrete"
+    "q_theory_diffuse3d_discrete"
+    "q_theory_discrete"
+    "q_theory_valid"
     ];
 
 operational_context_names = [
@@ -141,6 +148,14 @@ if ismember(name, diagnostic_names)
     source = "req_estimator";
     group = "req_diagnostic";
     rule = "explicit_diagnostic";
+    return
+end
+
+if ismember(name, theory_names)
+    role = "diagnostic";
+    source = "discrete_req_theory";
+    group = "theory_baseline";
+    rule = "explicit_theory_baseline";
     return
 end
 
