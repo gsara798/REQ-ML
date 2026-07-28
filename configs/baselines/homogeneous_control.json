@@ -1,7 +1,7 @@
 {
   "schema_name": "reqml_baseline_config",
   "schema_version": "1.0",
-  "baseline_id": "homogeneous_control_v1",
+  "baseline_id": "homogeneous_control",
   "dataset": {
     "dataset_id": "homogeneous_projected3d_control",
     "examples_mat": "outputs/datasets/homogeneous_projected3d_control/examples.mat",
@@ -22,32 +22,24 @@
   },
   "models": [
     "fixed_q",
-    "context_only",
-    "ridge_full",
-    "bagged_full"
+    "q_theory_discrete"
+  ],
+  "fixed_q": {
+    "estimator": "median"
+  },
+  "prediction_clip_range": [
+    0.001,
+    0.999
   ],
   "primary_metrics": [
     "q_mae",
     "q_rmse",
     "q_bias",
-    "sws_median_ape",
-    "sws_mape",
-    "sws_bias_percent"
+    "q_median_ae",
+    "q_max_ae"
   ],
-  "map_diagnostics": {
-    "enabled": true,
-    "selected_test_runs": 3,
-    "selection_rule": "one representative run from low, intermediate, and high direction count",
-    "outputs": [
-      "q_target_map",
-      "q_pred_map",
-      "q_error_map",
-      "cs_true_map",
-      "cs_pred_map",
-      "cs_error_percent_map",
-      "central_patch_power_spectrum",
-      "central_patch_radial_spectrum",
-      "central_patch_cumulative_energy"
-    ]
+  "execution": {
+    "save_outputs": true,
+    "overwrite": false
   }
 }
