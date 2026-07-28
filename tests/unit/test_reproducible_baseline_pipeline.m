@@ -176,6 +176,56 @@ clear cleanup
 
 end
 
+function testPredictionTableCanCarrySwsResults(test_case)
+
+campaign_frequency_hz = [500; 500];
+truth_cs_center_m_s = [2; 4];
+
+mapping_a = struct( ...
+    "Ecum", single([0; 0.5; 1]), ...
+    "k_cent", single([0; 500*pi; 1000*pi]));
+
+mapping_b = struct( ...
+    "Ecum", single([0; 0.5; 1]), ...
+    "k_cent", single([0; 250*pi; 500*pi]));
+
+req_mapping = {mapping_a; mapping_b};
+
+examples = table( ...
+    campaign_frequency_hz, ...
+    truth_cs_center_m_s, ...
+    req_mapping);
+
+q_pred = [0.5; 0.5];
+
+sws = reqml.evaluation.convert_q_predictions_to_sws( ...
+    examples, ...
+    q_pred);
+
+required = [
+    "k_pred_rad_m"
+    "cs_true_m_s"
+    "cs_pred_m_s"
+    "cs_error_m_s"
+    "cs_error_percent"
+    "cs_absolute_error_percent"
+    "sws_valid"
+    ];
+
+verifyTrue(test_case, all(ismember( ...
+    required, ...
+    string(sws.Properties.VariableNames))));
+
+verifyEqual( ...
+    test_case, ...
+    sws.cs_pred_m_s, ...
+    truth_cs_center_m_s, ...
+    RelTol=1e-6);
+
+verifyTrue(test_case, all(sws.sws_valid));
+
+end
+
 function remove_directory(path)
 
 if isfolder(path)

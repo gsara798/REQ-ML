@@ -1,6 +1,6 @@
 {
   "schema_name": "reqml_baseline_config",
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "baseline_id": "homogeneous_control",
   "dataset": {
     "dataset_id": "homogeneous_projected3d_control",
@@ -21,12 +21,39 @@
     "test_fraction": 0.15
   },
   "models": [
-    "fixed_q",
-    "q_theory_discrete"
+    {
+      "id": "fixed_q",
+      "type": "fixed_q",
+      "estimator": "median"
+    },
+    {
+      "id": "q_theory_discrete",
+      "type": "q_theory_discrete"
+    },
+    {
+      "id": "context_only",
+      "type": "ridge",
+      "predictor_selection": "context_only",
+      "lambda": 1.0,
+      "random_seed": 5101
+    },
+    {
+      "id": "ridge_full",
+      "type": "ridge",
+      "predictor_selection": "full",
+      "lambda": 1.0,
+      "random_seed": 5102
+    },
+    {
+      "id": "bagged_full",
+      "type": "bagged_trees",
+      "predictor_selection": "full",
+      "num_learning_cycles": 200,
+      "min_leaf_size": 8,
+      "use_parallel": false,
+      "random_seed": 5103
+    }
   ],
-  "fixed_q": {
-    "estimator": "median"
-  },
   "prediction_clip_range": [
     0.001,
     0.999
@@ -39,7 +66,7 @@
     "q_max_ae"
   ],
   "execution": {
-    "save_outputs": true,
+    "save_outputs": false,
     "overwrite": false
   }
 }

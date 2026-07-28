@@ -100,31 +100,37 @@ full_predictors = ...
 
 target = double(examples.(char(target_column)));
 
-model_names = string(config.models(:));
-supported = ["fixed_q", "q_theory_discrete"];
+model_specs = config.models;
+model_count = numel(model_specs);
+model_names = strings(model_count, 1);
 
-unsupported = setdiff(model_names, supported);
+prediction_tables = cell(model_count, 1);
+q_metric_tables = cell(model_count, 1);
+sws_metric_tables = cell(model_count, 1);
+model_metadata = cell(model_count, 1);
 
-if ~isempty(unsupported)
-    error("reqml:UnsupportedBaselineModel", ...
-        "This baseline milestone does not yet support: %s", ...
-        strjoin(unsupported, ", "));
-end
+for index = 1:model_count
+    model_spec = get_model_spec(model_specs, index);
 
-prediction_tables = cell(numel(model_names), 1);
-metric_tables = cell(numel(model_names), 1);
-model_metadata = cell(numel(model_names), 1);
+    if ~isfield(model_spec, "id") || ~isfield(model_spec, "type")
+        error("reqml:InvalidModelSpecification", ...
+            "Every model requires id and type.");
+    end
 
-for index = 1:numel(model_names)
-    model_name = model_names(index);
+    model_name = string(model_spec.id);
+    model_type = lower(string(model_spec.type));
+    model_names(index) = model_name;
 
-    switch model_name
+    switch model_type
         case "fixed_q"
             baseline = reqml.baselines.predict_fixed_q( ...
                 target, ...
                 split.train_mask, ...
-                Estimator=string(config.fixed_q.estimator), ...
+                Estimator=string(model_spec.estimator), ...
                 ClipRange=double(config.prediction_clip_range));
+
+            q_pred = baseline.q_pred;
+            model_metadata{index} = baseline;
 
         case "q_theory_discrete"
             baseline = reqml.baselines.predict_discrete_theory_q( ...
@@ -132,32 +138,78 @@ for index = 1:numel(model_names)
                 logical(examples.q_theory_valid), ...
                 ClipRange=double(config.prediction_clip_range));
 
+            q_pred = baseline.q_pred;
+            model_metadata{index} = baseline;
+
+        case {"ridge", "bagged_trees"}
+            selection_mode = string(model_spec.predictor_selection);
+
+            predictor_names = ...
+                reqml.training.select_predictors_from_registry( ...
+                    registry, selection_mode);
+
+            [X, predictor_metadata] = ...
+                reqml.training.build_numeric_predictor_matrix( ...
+                    examples, predictor_names);
+
+            fitted_model = reqml.training.fit_regression_model( ...
+                X, target, split.train_mask, model_spec);
+
+            fitted_model.predictor_names = predictor_names;
+            fitted_model.predictor_metadata = predictor_metadata;
+
+            q_pred = reqml.training.predict_regression_model( ...
+                fitted_model, X, ...
+                ClipRange=double(config.prediction_clip_range));
+
+            model_metadata{index} = fitted_model;
+
         otherwise
             error("reqml:UnsupportedBaselineModel", ...
-                "Unsupported model: %s", model_name);
+                "Unsupported model type: %s", model_type);
     end
+
+    sws_predictions = ...
+        reqml.evaluation.convert_q_predictions_to_sws( ...
+            examples, ...
+            q_pred);
 
     predictions = make_prediction_table( ...
         examples, ...
         target, ...
-        baseline.q_pred, ...
+        q_pred, ...
         split, ...
         model_name, ...
         string(config.split.run_column));
 
-    metrics = reqml.evaluation.evaluate_q_predictions( ...
+    predictions = [predictions, sws_predictions(:, [ ...
+        "k_pred_rad_m", ...
+        "cs_true_m_s", ...
+        "cs_pred_m_s", ...
+        "cs_error_m_s", ...
+        "cs_error_percent", ...
+        "cs_absolute_error_percent", ...
+        "sws_valid"])];
+
+    q_metrics = reqml.evaluation.evaluate_q_predictions( ...
         target, ...
-        baseline.q_pred, ...
+        q_pred, ...
+        split.partition, ...
+        model_name);
+
+    sws_metrics = reqml.evaluation.evaluate_sws_predictions( ...
+        sws_predictions, ...
         split.partition, ...
         model_name);
 
     prediction_tables{index} = predictions;
-    metric_tables{index} = metrics;
-    model_metadata{index} = baseline;
+    q_metric_tables{index} = q_metrics;
+    sws_metric_tables{index} = sws_metrics;
 end
 
 predictions = vertcat(prediction_tables{:});
-metrics = vertcat(metric_tables{:});
+q_metrics = vertcat(q_metric_tables{:});
+sws_metrics = vertcat(sws_metric_tables{:});
 
 execution = resolve_execution_config(config);
 
@@ -229,7 +281,12 @@ result.examples = examples;
 result.registry = registry;
 result.split = split;
 result.predictions = predictions;
-result.metrics = metrics;
+result.q_metrics = q_metrics;
+result.sws_metrics = sws_metrics;
+
+% Temporary compatibility alias. New code should use q_metrics explicitly.
+result.metrics = q_metrics;
+
 result.model_metadata = model_metadata;
 result.context_predictors = context_predictors;
 result.full_predictors = full_predictors;
@@ -252,7 +309,11 @@ else
     fprintf("Output      : disabled\n");
 end
 
-disp(metrics);
+fprintf("\nQuantile metrics:\n");
+disp(q_metrics);
+
+fprintf("\nSWS metrics:\n");
+disp(sws_metrics);
 
 end
 
@@ -276,6 +337,31 @@ predictions.q_true = q_true;
 predictions.q_pred = q_pred;
 predictions.q_residual = q_pred - q_true;
 predictions.q_abs_error = abs(predictions.q_residual);
+
+end
+
+function normalized = normalize_model_specs(models)
+
+normalized = cell(numel(models), 1);
+
+for index = 1:numel(models)
+    normalized{index} = get_model_spec(models, index);
+end
+
+end
+
+function model_spec = get_model_spec(models, index)
+
+if iscell(models)
+    model_spec = models{index};
+else
+    model_spec = models(index);
+end
+
+if ~isstruct(model_spec) || ~isscalar(model_spec)
+    error("reqml:InvalidModelSpecification", ...
+        "Model specification %d must be a scalar struct.", index);
+end
 
 end
 
@@ -306,7 +392,6 @@ required = [
     "dataset"
     "split"
     "models"
-    "fixed_q"
     "prediction_clip_range"
     ];
 
@@ -322,6 +407,21 @@ if string(config.schema_name) ~= "reqml_baseline_config"
     error("reqml:InvalidBaselineConfigSchema", ...
         "Unexpected baseline config schema: %s", ...
         string(config.schema_name));
+end
+
+if isempty(config.models) || ...
+        ~(isstruct(config.models) || iscell(config.models))
+    error("reqml:InvalidModelConfiguration", ...
+        "Baseline config models must be a non-empty struct array or cell array.");
+end
+
+for index = 1:numel(config.models)
+    model_spec = get_model_spec(config.models, index);
+
+    if ~isfield(model_spec, "id") || ~isfield(model_spec, "type")
+        error("reqml:InvalidModelSpecification", ...
+            "Every model specification requires id and type.");
+    end
 end
 
 end
@@ -345,7 +445,7 @@ manifest.config_path = char(config_path);
 manifest.examples_path = char(examples_path);
 manifest.output_directory = char(output_directory);
 
-manifest.models = cellstr(string(config.models(:)));
+manifest.models = normalize_model_specs(config.models);
 manifest.split_schema_name = split.schema_name;
 manifest.split_schema_version = split.schema_version;
 manifest.split_seed = split.seed;
