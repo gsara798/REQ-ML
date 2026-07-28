@@ -39,5 +39,9 @@
       "direction_count": 128,
       "field_class": "Diffuse3D"
     }
-  ]
+  ],
+  "execution": {
+    "start_parallel_pool": true,
+    "save_outputs": true
+  }
 }
