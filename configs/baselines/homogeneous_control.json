@@ -16,7 +16,7 @@
     ],
     "run_column": "campaign_run_id",
     "seed": 4101,
-    "train_fraction": 0.70,
+    "train_fraction": 0.7,
     "validation_fraction": 0.15,
     "test_fraction": 0.15
   },
@@ -66,7 +66,7 @@
     "q_max_ae"
   ],
   "execution": {
-    "save_outputs": false,
+    "save_outputs": true,
     "overwrite": false
   }
 }
