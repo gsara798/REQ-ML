@@ -43,22 +43,16 @@ end
 % Window, demean, and normalize patch
 % -------------------------------------------------------------------------
 
-V_win = V_raw .* req.W2;
+[V_win, preprocessing] = ...
+    reqml.spectrum.preprocess_req_patch( ...
+        V_raw, ...
+        req.W2);
 
-finite_mask = isfinite(V_win);
-
-if ~any(finite_mask(:))
+if ~preprocessing.valid
     q_val = NaN;
     req_curve = empty_req_curve(req, cfg);
     return;
 end
-
-mu = mean(V_win(finite_mask));
-sigma = std(V_win(finite_mask), 0);
-
-V_win(~finite_mask) = mu;
-V_win = V_win - mu;
-V_win = V_win ./ (sigma + eps);
 
 % -------------------------------------------------------------------------
 % Zero pad and spectral geometry
@@ -257,6 +251,7 @@ req_curve.win_size = getfield_with_default(req, 'win_size', NaN);
 req_curve.half_win = getfield_with_default(req, 'half_win', NaN);
 req_curve.pad_factor = getfield_with_default(req, 'pad_factor', NaN);
 req_curve.smooth_sigma = req.smooth_sigma;
+req_curve.preprocessing = preprocessing;
 
 req_curve.use_donut = getfield_with_default(req, 'use_donut', false);
 req_curve.donut_cs_min = getfield_with_default(req, 'donut_cs_min', NaN);
