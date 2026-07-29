@@ -174,7 +174,7 @@ for index = 1:model_count
             examples, ...
             q_pred);
 
-    predictions = make_prediction_table( ...
+    q_predictions = make_prediction_table( ...
         examples, ...
         target, ...
         q_pred, ...
@@ -182,14 +182,19 @@ for index = 1:model_count
         model_name, ...
         string(config.split.run_column));
 
-    predictions = [predictions, sws_predictions(:, [ ...
-        "k_pred_rad_m", ...
-        "cs_true_m_s", ...
-        "cs_pred_m_s", ...
-        "cs_error_m_s", ...
-        "cs_error_percent", ...
-        "cs_absolute_error_percent", ...
-        "sws_valid"])];
+    sws_output_columns = [
+        "k_pred_rad_m"
+        "cs_true_m_s"
+        "cs_pred_m_s"
+        "cs_error_m_s"
+        "cs_error_percent"
+        "cs_absolute_error_percent"
+        "sws_valid"
+        ];
+
+    predictions = [ ...
+        q_predictions, ...
+        sws_predictions(:, sws_output_columns)];
 
     q_metrics = reqml.evaluation.evaluate_q_predictions( ...
         target, ...
@@ -322,20 +327,66 @@ function predictions = make_prediction_table( ...
     q_true, ...
     q_pred, ...
     split, ...
-    baseline_id, ...
+    model_id, ...
     run_column)
 
 n = height(examples);
 
-predictions = table();
-predictions.row_index = (1:n)';
-predictions.baseline_id = repmat(baseline_id, n, 1);
-predictions.partition = split.partition;
-predictions.condition_id = split.condition_id;
-predictions.run_id = string(examples.(char(run_column)));
-predictions.q_true = q_true;
-predictions.q_pred = q_pred;
-predictions.q_residual = q_pred - q_true;
+if numel(q_true) ~= n || ...
+        numel(q_pred) ~= n || ...
+        numel(split.partition) ~= n
+    error("reqml:PredictionSizeMismatch", ...
+        "Prediction inputs must contain one row per example.");
+end
+
+model_id_column = repmat(string(model_id), n, 1);
+partition = string(split.partition(:));
+
+predictions = table( ...
+    model_id_column, ...
+    partition, ...
+    'VariableNames', ["model_id", "partition"]);
+
+metadata_columns = [
+    "dataset_id"
+    "sample_id"
+    "example_id"
+    "campaign_ordinal"
+    "campaign_run_id"
+    "campaign_hash_sha256"
+    "campaign_backend"
+    "campaign_scenario"
+    "campaign_seed"
+    "campaign_frequency_hz"
+    "campaign_background_cs_m_s"
+    "campaign_direction_count"
+    "patch_idx"
+    "cx"
+    "cz"
+    "x_center_m"
+    "z_center_m"
+    ];
+
+available = string(examples.Properties.VariableNames);
+metadata_columns = metadata_columns( ...
+    ismember(metadata_columns, available));
+
+if ~ismember(run_column, metadata_columns)
+    if ~ismember(run_column, available)
+        error("reqml:MissingRunColumn", ...
+            "Examples table is missing run column '%s'.", ...
+            run_column);
+    end
+
+    metadata_columns = [metadata_columns; run_column];
+end
+
+metadata = examples(:, cellstr(metadata_columns));
+predictions = [predictions, metadata];
+
+predictions.q_true = double(q_true(:));
+predictions.q_pred = double(q_pred(:));
+predictions.q_residual = predictions.q_pred - predictions.q_true;
 predictions.q_abs_error = abs(predictions.q_residual);
 
 end

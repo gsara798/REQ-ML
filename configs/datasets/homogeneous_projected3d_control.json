@@ -13,8 +13,8 @@
   },
   "extraction": {
     "minimum_placements_per_axis": 5,
-    "step_x": 8,
-    "step_z": 8,
+    "step_x": 4,
+    "step_z": 4,
     "store_req_curves": false,
     "use_window_parfor": true
   },
