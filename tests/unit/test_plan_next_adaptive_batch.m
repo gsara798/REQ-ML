@@ -210,6 +210,26 @@ report.config.sws_edges = ...
 report.config.frequency_edges = ...
     [199 350 450 601];
 
+assigned = table();
+
+assigned.coverage_purity_bin = [1; 1; 3];
+assigned.coverage_diffusivity_bin = [1; 1; 3];
+assigned.coverage_valid = true(3, 1);
+
+assigned.campaign_geometry_family = [
+    "bilayer"
+    "bilayer"
+    "bilayer"
+    ];
+
+assigned.campaign_run_id = [
+    "historical_run_1"
+    "historical_run_2"
+    "historical_run_3"
+    ];
+
+report.assigned_examples = assigned;
+
 end
 
 
