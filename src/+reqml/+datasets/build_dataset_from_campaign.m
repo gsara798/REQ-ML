@@ -156,6 +156,8 @@ n = height(examples);
 source_names = [
     "ordinal"
     "design_id"
+    "condition_id"
+    "realization_id"
     "run_id"
     "hash_sha256"
     "backend"
@@ -190,6 +192,8 @@ source_names = [
 target_names = [
     "campaign_ordinal"
     "campaign_design_id"
+    "campaign_condition_id"
+    "campaign_realization_id"
     "campaign_run_id"
     "campaign_hash_sha256"
     "campaign_backend"
@@ -220,6 +224,12 @@ target_names = [
     "campaign_propagation_model"
     "campaign_sample_file"
     ];
+
+if numel(source_names) ~= numel(target_names)
+    error("reqml:CampaignMetadataMappingMismatch", ...
+        ["Campaign metadata source and target mappings must " ...
+         "have equal lengths."]);
+end
 
 available = string(run.Properties.VariableNames);
 attached_names = strings(0, 1);
