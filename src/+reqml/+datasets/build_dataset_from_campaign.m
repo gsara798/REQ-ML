@@ -149,41 +149,47 @@ end
 end
 
 function examples = attach_campaign_metadata(examples, run)
+%ATTACH_CAMPAIGN_METADATA Propagate scientific run metadata to every patch.
 
 n = height(examples);
 
-examples.campaign_ordinal = ...
-    repmat(double(run.ordinal), n, 1);
+source_names = [
+    "ordinal"
+    "design_id"
+    "run_id"
+    "hash_sha256"
+    "backend"
+    "scenario"
+    "seed"
+    "frequency_hz"
+    "background_cs_m_s"
+    "medium_object_count"
+    "primary_object_type"
+    "primary_object_cs_m_s"
+    "primary_object_radius_m"
+    "primary_object_center_x_m"
+    "primary_object_center_z_m"
+    "primary_object_normal_angle_rad"
+    "primary_object_offset_m"
+    "geometry_family"
+    "direction_count"
+    "retained_direction_count"
+    "direction_support_type"
+    "solid_angle_sr"
+    "requested_in_plane_count"
+    "retained_in_plane_count"
+    "retained_in_plane_fraction"
+    "angular_entropy"
+    "angular_effective_bins"
+    "radial_entropy"
+    "radial_effective_bins"
+    "propagation_model"
+    "wavefield_sample_path"
+    ];
 
-examples.campaign_run_id = ...
-    repmat(string(run.run_id), n, 1);
-
-examples.campaign_hash_sha256 = ...
-    repmat(string(run.hash_sha256), n, 1);
-
-examples.campaign_backend = ...
-    repmat(string(run.backend), n, 1);
-
-examples.campaign_scenario = ...
-    repmat(string(run.scenario), n, 1);
-
-examples.campaign_seed = ...
-    repmat(double(run.seed), n, 1);
-
-examples.campaign_frequency_hz = ...
-    repmat(double(run.frequency_hz), n, 1);
-
-examples.campaign_background_cs_m_s = ...
-    repmat(double(run.background_cs_m_s), n, 1);
-
-examples.campaign_direction_count = ...
-    repmat(double(run.direction_count), n, 1);
-
-examples.campaign_sample_file = ...
-    repmat(string(run.wavefield_sample_path), n, 1);
-
-metadata_names = [
+target_names = [
     "campaign_ordinal"
+    "campaign_design_id"
     "campaign_run_id"
     "campaign_hash_sha256"
     "campaign_backend"
@@ -191,17 +197,106 @@ metadata_names = [
     "campaign_seed"
     "campaign_frequency_hz"
     "campaign_background_cs_m_s"
+    "campaign_medium_object_count"
+    "campaign_primary_object_type"
+    "campaign_primary_object_cs_m_s"
+    "campaign_primary_object_radius_m"
+    "campaign_primary_object_center_x_m"
+    "campaign_primary_object_center_z_m"
+    "campaign_primary_object_normal_angle_rad"
+    "campaign_primary_object_offset_m"
+    "campaign_geometry_family"
     "campaign_direction_count"
+    "campaign_retained_direction_count"
+    "campaign_direction_support_type"
+    "campaign_solid_angle_sr"
+    "campaign_requested_in_plane_count"
+    "campaign_retained_in_plane_count"
+    "campaign_retained_in_plane_fraction"
+    "campaign_angular_entropy"
+    "campaign_angular_effective_bins"
+    "campaign_radial_entropy"
+    "campaign_radial_effective_bins"
+    "campaign_propagation_model"
     "campaign_sample_file"
     ];
 
-examples = movevars( ...
-    examples, ...
-    metadata_names, ...
-    "After", ...
-    "example_id");
+available = string(run.Properties.VariableNames);
+attached_names = strings(0, 1);
+
+for index = 1:numel(source_names)
+    source_name = source_names(index);
+    target_name = target_names(index);
+
+    if ~ismember(source_name, available)
+        continue
+    end
+
+    value = run.(source_name);
+
+    if height(run) ~= 1
+        error("reqml:InvalidCampaignMetadataRow", ...
+            "Campaign metadata attachment requires exactly one run.");
+    end
+
+    examples.(target_name) = repeat_metadata_value( ...
+        value, ...
+        n, ...
+        source_name);
+
+    attached_names(end + 1, 1) = target_name; %#ok<AGROW>
+end
+
+if ~isempty(attached_names)
+    examples = movevars( ...
+        examples, ...
+        attached_names, ...
+        "After", ...
+        "example_id");
+end
 
 end
+
+
+function repeated = repeat_metadata_value(value, n, source_name)
+
+if iscell(value)
+    if numel(value) ~= 1
+        error("reqml:InvalidCampaignMetadataValue", ...
+            "Campaign metadata '%s' must be scalar.", ...
+            source_name);
+    end
+
+    value = value{1};
+end
+
+if isstring(value) || ischar(value)
+    repeated = repmat(string(value), n, 1);
+    return
+end
+
+if iscategorical(value)
+    repeated = repmat(string(value), n, 1);
+    return
+end
+
+if isnumeric(value) || islogical(value)
+    if ~isscalar(value)
+        error("reqml:InvalidCampaignMetadataValue", ...
+            "Campaign metadata '%s' must be scalar.", ...
+            source_name);
+    end
+
+    repeated = repmat(value, n, 1);
+    return
+end
+
+error("reqml:UnsupportedCampaignMetadataType", ...
+    "Campaign metadata '%s' has an unsupported type.", ...
+    source_name);
+
+end
+
 
 function record = make_summary_record( ...
         run, readiness, sample_summary)
