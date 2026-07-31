@@ -2,23 +2,8 @@ function paths = writeAdaptiveBatch( ...
     physical_conditions, campaign_config, options)
 %WRITEADAPTIVEBATCH Write an auditable adaptive simulation batch.
 %
-% Inputs:
-%
-%   physical_conditions
-%       Backend-neutral physical conditions produced by
-%       materializePhysicalConditions.
-%
-%   campaign_config
-%       Backend-specific campaign header information.
-%
-% Outputs:
-%
-%   adaptive_batch_plan.json
-%   simulation_campaign.json
-%
-% The adaptive plan preserves physical conditions, condition IDs, and
-% realization IDs. The simulation campaign is compatible with simulation
-% campaign schema 1.2.
+% One swsynth campaign is written per resolved base configuration because
+% simulation-campaign schema 1.2 supports one base_config per campaign.
 
 arguments
     physical_conditions (:,1) struct
@@ -38,18 +23,6 @@ if isempty(physical_conditions)
         "At least one physical condition is required.");
 end
 
-all_runs = cell(numel(physical_conditions), 1);
-
-for condition_index = 1:numel(physical_conditions)
-    all_runs{condition_index} = ...
-        reqml.campaigns.physicalConditionToSwsynthRuns( ...
-            physical_conditions(condition_index));
-end
-
-runs = vertcat(all_runs{:});
-
-validate_unique_design_ids(runs);
-
 output_directory = string(options.OutputDirectory);
 
 if ~isfolder(output_directory)
@@ -62,26 +35,114 @@ if ~isfolder(output_directory)
     end
 end
 
+all_runs = cell(numel(physical_conditions), 1);
+base_configs = strings(numel(physical_conditions), 1);
+families = strings(numel(physical_conditions), 1);
+
+for condition_index = 1:numel(physical_conditions)
+    condition = physical_conditions(condition_index);
+
+    families(condition_index) = ...
+        string(condition.geometry.family);
+
+    base_configs(condition_index) = ...
+        reqml.campaigns.resolveSwsynthBaseConfig( ...
+            families(condition_index), ...
+            campaign_config.base_config_mapping);
+
+    all_runs{condition_index} = ...
+        reqml.campaigns.physicalConditionToSwsynthRuns( ...
+            condition);
+end
+
+runs = vertcat(all_runs{:});
+validate_unique_design_ids(runs);
+
 plan = struct();
 
 plan.schema_name = "reqml_adaptive_batch_plan";
-plan.schema_version = "1.1";
+plan.schema_version = "1.2";
 plan.batch_id = options.BatchId;
 plan.planner_seed = options.PlannerSeed;
 
 plan.parent_coverage_report_hash = ...
     options.ParentCoverageReportHash;
 
-plan.condition_count = ...
-    numel(physical_conditions);
+plan.condition_count = numel(physical_conditions);
+plan.run_count = numel(runs);
 
-plan.run_count = ...
-    numel(runs);
-
-plan.physical_conditions = ...
-    physical_conditions;
-
+plan.physical_conditions = physical_conditions;
+plan.condition_base_configs = base_configs;
 plan.runs = runs;
+
+plan_path = fullfile( ...
+    output_directory, ...
+    "adaptive_batch_plan.json");
+
+write_json(plan_path, plan);
+
+unique_base_configs = unique(base_configs, "stable");
+campaign_paths = strings(numel(unique_base_configs), 1);
+campaign_families = strings(numel(unique_base_configs), 1);
+campaign_run_counts = zeros(numel(unique_base_configs), 1);
+
+for group_index = 1:numel(unique_base_configs)
+    base_config = unique_base_configs(group_index);
+
+    condition_mask = base_configs == base_config;
+    group_families = unique(families(condition_mask));
+
+    if numel(group_families) ~= 1
+        error("reqml:AmbiguousSwsynthBaseConfigMapping", ...
+            ["Multiple geometry families resolve to the same base config. " ...
+             "Each adaptive campaign group must represent one family."]);
+    end
+
+    family = group_families(1);
+    condition_indices = find(condition_mask);
+
+    group_runs_cell = all_runs(condition_indices);
+    group_runs = vertcat(group_runs_cell{:});
+
+    campaign = make_campaign( ...
+        group_runs, ...
+        family, ...
+        base_config, ...
+        campaign_config);
+
+    campaign_path = fullfile( ...
+        output_directory, ...
+        "simulation_campaign_" + family + ".json");
+
+    write_json(campaign_path, campaign);
+
+    campaign_paths(group_index) = ...
+        string(campaign_path);
+
+    campaign_families(group_index) = family;
+    campaign_run_counts(group_index) = ...
+        numel(group_runs);
+end
+
+paths = struct();
+paths.plan = string(plan_path);
+
+paths.simulation_campaigns = table( ...
+    campaign_families(:), ...
+    unique_base_configs(:), ...
+    campaign_run_counts(:), ...
+    campaign_paths(:), ...
+    'VariableNames', { ...
+        'geometry_family', ...
+        'base_config', ...
+        'run_count', ...
+        'path'});
+
+end
+
+
+function campaign = make_campaign( ...
+        runs, family, base_config, campaign_config)
 
 simulation_runs = repmat(struct( ...
     "design_id", "", ...
@@ -100,35 +161,19 @@ end
 campaign = struct();
 
 campaign.schema_version = "1.2";
-campaign.backend = ...
-    lower(string(campaign_config.backend));
+campaign.backend = "swsynth";
 
-campaign.campaign_name = ...
-    string(campaign_config.campaign_name);
+campaign.campaign_name = sprintf( ...
+    "%s_%s", ...
+    string(campaign_config.campaign_name), ...
+    family);
 
-campaign.base_config = ...
-    string(campaign_config.base_config);
-
+campaign.base_config = base_config;
 campaign.runs = simulation_runs;
 
 if isfield(campaign_config, "output")
     campaign.output = campaign_config.output;
 end
-
-plan_path = fullfile( ...
-    output_directory, ...
-    "adaptive_batch_plan.json");
-
-campaign_path = fullfile( ...
-    output_directory, ...
-    "simulation_campaign.json");
-
-write_json(plan_path, plan);
-write_json(campaign_path, campaign);
-
-paths = struct();
-paths.plan = string(plan_path);
-paths.simulation_campaign = string(campaign_path);
 
 end
 
@@ -150,7 +195,7 @@ function validate_campaign_config(config)
 required = [
     "backend"
     "campaign_name"
-    "base_config"
+    "base_config_mapping"
     ];
 
 missing = setdiff( ...
@@ -163,19 +208,21 @@ if ~isempty(missing)
         missing(1));
 end
 
-for name = required.'
-    value = string(config.(name));
-
-    if ~isscalar(value) || strlength(value) == 0
-        error("reqml:InvalidAdaptiveCampaignConfig", ...
-            "Campaign configuration field '%s' must be non-empty.", ...
-            name);
-    end
-end
-
 if lower(string(config.backend)) ~= "swsynth"
     error("reqml:UnsupportedAdaptiveCampaignBackend", ...
-        "writeAdaptiveBatch currently supports only the swsynth backend.");
+        "writeAdaptiveBatch currently supports only swsynth.");
+end
+
+if strlength(string(config.campaign_name)) == 0
+    error("reqml:InvalidAdaptiveCampaignConfig", ...
+        "campaign_name must be non-empty.");
+end
+
+if ~isstruct(config.base_config_mapping) || ...
+        ~isscalar(config.base_config_mapping)
+
+    error("reqml:InvalidAdaptiveCampaignConfig", ...
+        "base_config_mapping must be a scalar struct.");
 end
 
 end
@@ -202,7 +249,6 @@ end
 function write_json(path_value, value)
 
 temporary_path = string(path_value) + ".tmp";
-
 delete_if_present(temporary_path);
 
 file_id = fopen(temporary_path, "w");
