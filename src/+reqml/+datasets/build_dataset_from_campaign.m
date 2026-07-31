@@ -29,10 +29,10 @@ arguments
     options.TheoryClassMapping (:,1) struct = struct.empty
 
     options.Loader (1,1) function_handle = ...
-        @reqml.integration.load_wavefield_sample
+        @reqml.io.load_wavefield_sample
 
     options.ReadinessEvaluator (1,1) function_handle = ...
-        @reqml.integration.assess_req_readiness
+        @reqml.readiness.assess_req_readiness
 
     options.Extractor (1,1) function_handle = ...
         @reqml.datasets.extract_examples_from_sample

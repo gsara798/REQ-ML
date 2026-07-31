@@ -11,7 +11,7 @@ function testLoadsValidSample(testCase)
 sample_file = write_sample(valid_sample());
 cleanup = onCleanup(@() delete_if_present(sample_file));
 
-data = reqml.integration.load_wavefield_sample(sample_file);
+data = reqml.io.load_wavefield_sample(sample_file);
 
 verifyEqual(testCase, data.sample_schema_name, "wavefield_sample");
 verifyEqual(testCase, data.sample_schema_version, "1.0");
@@ -35,7 +35,7 @@ save(sample_file, "wrong_name");
 cleanup = onCleanup(@() delete_if_present(sample_file));
 
 verifyError(testCase, ...
-    @() reqml.integration.load_wavefield_sample(sample_file), ...
+    @() reqml.io.load_wavefield_sample(sample_file), ...
     "reqml:InvalidWavefieldSample");
 
 clear cleanup
@@ -48,7 +48,7 @@ sample_file = write_sample(sample);
 cleanup = onCleanup(@() delete_if_present(sample_file));
 
 verifyError(testCase, ...
-    @() reqml.integration.load_wavefield_sample(sample_file), ...
+    @() reqml.io.load_wavefield_sample(sample_file), ...
     "reqml:InvalidWavefieldOrientation");
 
 clear cleanup
@@ -61,7 +61,7 @@ sample_file = write_sample(sample);
 cleanup = onCleanup(@() delete_if_present(sample_file));
 
 verifyError(testCase, ...
-    @() reqml.integration.load_wavefield_sample(sample_file), ...
+    @() reqml.io.load_wavefield_sample(sample_file), ...
     "reqml:InconsistentWavefieldTruth");
 
 clear cleanup
@@ -74,7 +74,7 @@ sample_file = write_sample(sample);
 cleanup = onCleanup(@() delete_if_present(sample_file));
 
 verifyError(testCase, ...
-    @() reqml.integration.load_wavefield_sample(sample_file), ...
+    @() reqml.io.load_wavefield_sample(sample_file), ...
     "reqml:InvalidWavefieldSize");
 
 clear cleanup

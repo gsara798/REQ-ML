@@ -10,8 +10,8 @@ function report = assess_req_readiness(data, options)
 %   N = ceil(Lwin / spacing) + 1
 %
 % Usage:
-%   data = reqml.integration.load_wavefield_sample(sample_file);
-%   report = reqml.integration.assess_req_readiness(data);
+%   data = reqml.io.load_wavefield_sample(sample_file);
+%   report = reqml.readiness.assess_req_readiness(data);
 %
 % This logic belongs in REQ-ML because cs_guess, wavelength-scaled windows,
 % and minimum sliding-window placements are estimator-specific choices.

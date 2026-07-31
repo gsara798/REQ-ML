@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-# req-ml
-=======
-# Adaptive REQ
->>>>>>> origin/main
+# REQ-ML
 
 Research-oriented MATLAB toolbox for **adaptive radial energy-quantile (REQ) estimation** and local shear-wave-speed mapping in harmonic shear-wave elastography.
 
@@ -10,16 +6,16 @@ This repository contains reusable analysis functions, experiment runners, config
 
 > **Research status:** this is active research software. Interfaces, model definitions, and experiment organization may change before the first stable release. The code is not intended for clinical use or medical decision-making.
 
-<<<<<<< HEAD
-- `src/`: reusable adaptive REQ MATLAB functions.
-- `experiments/`: experiment runners and analysis scripts.
-- `configs/`: JSON configuration files for reproducible runs.
-- `docs/`: documentation and result summaries.
-- `archive/`: selected archived scripts/docs from earlier project stages.
-- `setup_reqml.m`: MATLAB setup helper.
-=======
+## Repository contents
+
+- `src/`: reusable REQ-ML MATLAB functions.
+- `experiments/`: reproducible experiment entry points.
+- `configs/`: versioned JSON configurations.
+- `docs/`: architecture, contracts, methodology, and result documentation.
+- `archive/`: historical workflows that are not part of the active API.
+- `setup_reqml.m`: MATLAB path setup helper.
+
 ## Method overview
->>>>>>> origin/main
 
 REQ estimates a representative local wavenumber from the cumulative radial energy of a windowed wavefield patch. Starting from the local radial spectrum, the normalized cumulative energy is
 
@@ -61,13 +57,13 @@ The main active development lines are:
 ## Repository structure
 
 ```text
-adaptive_req_local/
+REQ-ML/
 ├── src/                 Reusable MATLAB functions
 ├── experiments/         Training, validation, and analysis runners
 ├── configs/             Versioned JSON experiment configurations
 ├── docs/                Method notes and result summaries
 ├── archive/             Selected historical material; not part of the stable API
-├── setup_adaptive_req.m MATLAB path setup helper
+├── setup_reqml.m MATLAB path setup helper
 └── outputs/             Local generated artifacts; ignored by git
 ```
 
@@ -78,19 +74,14 @@ Code under `src/` is the intended reusable layer. Scripts under `experiments/` m
 Clone the repository and open MATLAB in the repository root:
 
 ```bash
-git clone https://github.com/gsara798/adaptive_req_local.git
-cd adaptive_req_local
+git clone https://github.com/gsara798/REQ-ML.git
+cd REQ-ML
 ```
 
 Then initialize the MATLAB path:
 
 ```matlab
-<<<<<<< HEAD
-cd('/Users/sara/local/req-ml')
-run('setup_reqml.m')
-=======
-root_dir = setup_adaptive_req();
->>>>>>> origin/main
+root_dir = setup_reqml();
 ```
 
 The setup function adds the repository's `src/` directory to the MATLAB path and returns the resolved project root. No machine-specific absolute path is required.
@@ -103,7 +94,7 @@ Before running an experiment:
 
 1. Read the associated documentation and configuration.
 2. Confirm that any required simulation cache or trained model bundle is available locally.
-3. Run `setup_adaptive_req()` from the repository root.
+3. Run `setup_reqml()` from the repository root.
 4. Execute the selected experiment runner from MATLAB.
 5. Record the configuration, MATLAB release, and Git commit used for the run.
 
