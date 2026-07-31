@@ -1,17 +1,27 @@
 function paths = writeAdaptiveBatch( ...
-    conditions, campaign_config, options)
+    physical_conditions, campaign_config, options)
 %WRITEADAPTIVEBATCH Write an auditable adaptive simulation batch.
+%
+% Inputs:
+%
+%   physical_conditions
+%       Backend-neutral physical conditions produced by
+%       materializePhysicalConditions.
+%
+%   campaign_config
+%       Backend-specific campaign header information.
 %
 % Outputs:
 %
 %   adaptive_batch_plan.json
 %   simulation_campaign.json
 %
-% The plan preserves condition_id and realization_id. The simulation
-% campaign remains compatible with simulation-campaign schema 1.2.
+% The adaptive plan preserves physical conditions, condition IDs, and
+% realization IDs. The simulation campaign is compatible with simulation
+% campaign schema 1.2.
 
 arguments
-    conditions (:,1) struct
+    physical_conditions (:,1) struct
     campaign_config (1,1) struct
 
     options.OutputDirectory {mustBeTextScalar}
@@ -23,8 +33,22 @@ end
 validate_campaign_config(campaign_config);
 validate_options(options);
 
-runs = reqml.campaigns.expandConditionRealizations( ...
-    conditions);
+if isempty(physical_conditions)
+    error("reqml:EmptyAdaptivePhysicalConditions", ...
+        "At least one physical condition is required.");
+end
+
+all_runs = cell(numel(physical_conditions), 1);
+
+for condition_index = 1:numel(physical_conditions)
+    all_runs{condition_index} = ...
+        reqml.campaigns.physicalConditionToSwsynthRuns( ...
+            physical_conditions(condition_index));
+end
+
+runs = vertcat(all_runs{:});
+
+validate_unique_design_ids(runs);
 
 output_directory = string(options.OutputDirectory);
 
@@ -39,15 +63,24 @@ if ~isfolder(output_directory)
 end
 
 plan = struct();
+
 plan.schema_name = "reqml_adaptive_batch_plan";
-plan.schema_version = "1.0";
+plan.schema_version = "1.1";
 plan.batch_id = options.BatchId;
 plan.planner_seed = options.PlannerSeed;
+
 plan.parent_coverage_report_hash = ...
     options.ParentCoverageReportHash;
-plan.condition_count = numel(conditions);
-plan.run_count = numel(runs);
-plan.conditions = conditions;
+
+plan.condition_count = ...
+    numel(physical_conditions);
+
+plan.run_count = ...
+    numel(runs);
+
+plan.physical_conditions = ...
+    physical_conditions;
+
 plan.runs = runs;
 
 simulation_runs = repmat(struct( ...
@@ -65,12 +98,17 @@ for index = 1:numel(runs)
 end
 
 campaign = struct();
+
 campaign.schema_version = "1.2";
-campaign.backend = string(campaign_config.backend);
-campaign.campaign_name = string( ...
-    campaign_config.campaign_name);
-campaign.base_config = string( ...
-    campaign_config.base_config);
+campaign.backend = ...
+    lower(string(campaign_config.backend));
+
+campaign.campaign_name = ...
+    string(campaign_config.campaign_name);
+
+campaign.base_config = ...
+    string(campaign_config.base_config);
+
 campaign.runs = simulation_runs;
 
 if isfield(campaign_config, "output")
@@ -91,6 +129,18 @@ write_json(campaign_path, campaign);
 paths = struct();
 paths.plan = string(plan_path);
 paths.simulation_campaign = string(campaign_path);
+
+end
+
+
+function validate_unique_design_ids(runs)
+
+design_ids = string({runs.design_id})';
+
+if numel(unique(design_ids)) ~= numel(design_ids)
+    error("reqml:DuplicateAdaptiveDesignId", ...
+        "Adaptive batch design IDs must be unique.");
+end
 
 end
 
@@ -123,11 +173,9 @@ for name = required.'
     end
 end
 
-if ~ismember(lower(string(config.backend)), ...
-        ["swsynth", "kwsim"])
-
-    error("reqml:InvalidAdaptiveCampaignConfig", ...
-        "backend must be swsynth or kwsim.");
+if lower(string(config.backend)) ~= "swsynth"
+    error("reqml:UnsupportedAdaptiveCampaignBackend", ...
+        "writeAdaptiveBatch currently supports only the swsynth backend.");
 end
 
 end
@@ -154,6 +202,7 @@ end
 function write_json(path_value, value)
 
 temporary_path = string(path_value) + ".tmp";
+
 delete_if_present(temporary_path);
 
 file_id = fopen(temporary_path, "w");
