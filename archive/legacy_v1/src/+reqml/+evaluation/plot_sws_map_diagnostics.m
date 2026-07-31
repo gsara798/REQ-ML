@@ -1,0 +1,56 @@
+function figures = plot_sws_map_diagnostics(map)
+%PLOT_SWS_MAP_DIAGNOSTICS Plot predicted SWS and local percentage error.
+
+arguments
+    map (1,1) struct
+end
+
+x_mm = 1e3 * double(map.x_center_m);
+z_mm = 1e3 * double(map.z_center_m);
+
+figures = gobjects(2, 1);
+
+figures(1) = figure( ...
+    Name="Predicted local SWS map");
+
+imagesc( ...
+    x_mm, ...
+    z_mm, ...
+    map.cs_pred_m_s);
+
+axis image;
+axis xy;
+colorbar;
+
+xlabel("x (mm)");
+ylabel("z (mm)");
+
+title(sprintf( ...
+    "%s | predicted SWS | %.0f Hz | c_s = %.1f m/s | N_{dir} = %g", ...
+    map.campaign_run_id, ...
+    map.frequency_hz, ...
+    map.background_cs_m_s, ...
+    map.direction_count), ...
+    Interpreter="none");
+
+figures(2) = figure( ...
+    Name="Local SWS percentage error");
+
+imagesc( ...
+    x_mm, ...
+    z_mm, ...
+    map.cs_error_percent);
+
+axis image;
+axis xy;
+colorbar;
+
+xlabel("x (mm)");
+ylabel("z (mm)");
+
+title(sprintf( ...
+    "%s | signed SWS error (%%)", ...
+    map.campaign_run_id), ...
+    Interpreter="none");
+
+end

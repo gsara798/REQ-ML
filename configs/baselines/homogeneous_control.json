@@ -1,0 +1,72 @@
+{
+  "schema_name": "reqml_baseline_config",
+  "schema_version": "2.0",
+  "baseline_id": "homogeneous_control",
+  "dataset": {
+    "dataset_id": "homogeneous_projected3d_control",
+    "examples_mat": "outputs/datasets/homogeneous_projected3d_control/examples.mat",
+    "target_column": "q_target_from_center_truth"
+  },
+  "split": {
+    "method": "grouped_condition_holdout",
+    "group_columns": [
+      "campaign_background_cs_m_s",
+      "campaign_frequency_hz",
+      "campaign_direction_count"
+    ],
+    "run_column": "campaign_run_id",
+    "seed": 4101,
+    "train_fraction": 0.7,
+    "validation_fraction": 0.15,
+    "test_fraction": 0.15
+  },
+  "models": [
+    {
+      "id": "fixed_q",
+      "type": "fixed_q",
+      "estimator": "median"
+    },
+    {
+      "id": "q_theory_discrete",
+      "type": "q_theory_discrete"
+    },
+    {
+      "id": "context_only",
+      "type": "ridge",
+      "predictor_selection": "context_only",
+      "lambda": 1.0,
+      "random_seed": 5101
+    },
+    {
+      "id": "ridge_full",
+      "type": "ridge",
+      "predictor_selection": "full",
+      "lambda": 1.0,
+      "random_seed": 5102
+    },
+    {
+      "id": "bagged_full",
+      "type": "bagged_trees",
+      "predictor_selection": "full",
+      "num_learning_cycles": 200,
+      "min_leaf_size": 8,
+      "use_parallel": false,
+      "random_seed": 5103
+    }
+  ],
+  "prediction_clip_range": [
+    0.001,
+    0.999
+  ],
+  "primary_metrics": [
+    "q_mae",
+    "q_rmse",
+    "q_bias",
+    "q_median_ae",
+    "q_max_ae"
+  ],
+  "execution": {
+    "save_outputs": true,
+    "overwrite": false
+  }
+}

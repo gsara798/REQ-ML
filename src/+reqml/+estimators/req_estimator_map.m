@@ -383,6 +383,13 @@ if return_feature_table
     row.cs_pred = cs_i;
     row.REQ_M = feat_cfg.M;
     row.M = feat_cfg.M;
+    row.REQ_cs_guess_m_s = feat_cfg.cs_guess_used;
+    row.GRID_dx_m = cfg.dx;
+    row.GRID_dz_m = cfg.dz;
+    row.REQ_dkx_rad_m = get_numeric_field( ...
+        req_curve_i, 'dkx', NaN);
+    row.REQ_dkz_rad_m = get_numeric_field( ...
+        req_curve_i, 'dkz', NaN);
     row.SIM_f0 = cfg.f0;
     row.SIM_cs_bg = cfg.cs_bg;
     row.SIM_WaveModel = get_string_field(cfg, 'WaveModel', "");
