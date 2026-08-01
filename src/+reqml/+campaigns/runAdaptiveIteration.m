@@ -1,0 +1,237 @@
+function result = runAdaptiveIteration( ...
+    campaign_csv_files, feat_cfg, campaign_config, options)
+%RUNADAPTIVEITERATION Build accumulated data, measure coverage, and plan.
+%
+% This function does not execute simulations. It performs:
+%
+%   campaign CSVs
+%       -> combined campaign CSV
+%       -> accumulated patch dataset
+%       -> complete coverage report
+%       -> next adaptive batch
+%
+% The generated simulation campaigns can then be executed by
+% shear-wave-simulation-framework.
+
+arguments
+    campaign_csv_files (:,1) string
+    feat_cfg (1,1) struct
+    campaign_config (1,1) struct
+
+    options.OutputDirectory {mustBeTextScalar}
+    options.IterationId (1,1) string
+    options.PlannerSeed (1,1) double
+
+    options.PurityEdges (1,:) double
+    options.DiffusivityEdges (1,:) double
+    options.SwsEdges (1,:) double
+    options.FrequencyEdges (1,:) double
+
+    options.MinimumExamples (1,1) double = 500
+    options.MinimumIndependentRuns (1,1) double = 5
+    options.MinimumSwsBins (1,1) double = 3
+    options.MinimumFrequencyBins (1,1) double = 3
+    options.MinimumIndependentConditions (1,1) double = 3
+    options.MinimumGeometrySeeds (1,1) double = 0
+
+    options.MaximumConditions (1,1) double = 20
+    options.RealizationsPerCondition (1,1) double = 2
+
+    options.ParentCoverageReportHash (1,1) string = ""
+end
+
+validate_inputs(campaign_csv_files, options);
+
+output_directory = string(options.OutputDirectory);
+
+if ~isfolder(output_directory)
+    [created, message] = mkdir(output_directory);
+
+    if ~created
+        error("reqml:AdaptiveIterationDirectoryCreateFailed", ...
+            "Could not create output directory '%s': %s", ...
+            output_directory, message);
+    end
+end
+
+combined_csv = fullfile( ...
+    output_directory, ...
+    "combined_campaign_runs.csv");
+
+combined_runs = combine_campaign_csvs( ...
+    campaign_csv_files);
+
+writetable( ...
+    combined_runs, ...
+    combined_csv, ...
+    FileType="text", ...
+    Delimiter=",");
+
+dataset_directory = fullfile( ...
+    output_directory, ...
+    "dataset");
+
+dataset = reqml.datasets.build_dataset_from_campaign( ...
+    combined_csv, ...
+    feat_cfg, ...
+    DatasetId=options.IterationId, ...
+    OutputDirectory=dataset_directory, ...
+    SaveOutputs=true);
+
+coverage = reqml.coverage.computePatchCoverage( ...
+    dataset.examples, ...
+    PurityEdges=options.PurityEdges, ...
+    DiffusivityEdges=options.DiffusivityEdges, ...
+    SwsEdges=options.SwsEdges, ...
+    FrequencyEdges=options.FrequencyEdges, ...
+    MinimumExamples=options.MinimumExamples, ...
+    MinimumIndependentRuns= ...
+        options.MinimumIndependentRuns, ...
+    MinimumSwsBins=options.MinimumSwsBins, ...
+    MinimumFrequencyBins= ...
+        options.MinimumFrequencyBins, ...
+    MinimumIndependentConditions= ...
+        options.MinimumIndependentConditions, ...
+    MinimumGeometrySeeds=options.MinimumGeometrySeeds);
+
+coverage_mat = fullfile( ...
+    output_directory, ...
+    "coverage_report.mat");
+
+coverage_report = coverage; %#ok<NASGU>
+save(coverage_mat, "coverage_report", "-v7.3");
+
+summary_csv = fullfile( ...
+    output_directory, ...
+    "coverage_summary.csv");
+
+deficits_csv = fullfile( ...
+    output_directory, ...
+    "coverage_deficits.csv");
+
+writetable(coverage.summary, summary_csv);
+writetable(coverage.deficits, deficits_csv);
+
+next_batch_directory = fullfile( ...
+    output_directory, ...
+    "next_batch");
+
+planning = reqml.campaigns.planNextAdaptiveBatch( ...
+    coverage, ...
+    campaign_config, ...
+    OutputDirectory=next_batch_directory, ...
+    BatchId=options.IterationId + "_next", ...
+    PlannerSeed=options.PlannerSeed, ...
+    ParentCoverageReportHash= ...
+        options.ParentCoverageReportHash, ...
+    MaximumConditions=options.MaximumConditions, ...
+    RealizationsPerCondition= ...
+        options.RealizationsPerCondition);
+
+result = struct();
+
+result.schema_name = ...
+    "reqml_adaptive_iteration_result";
+
+result.schema_version = "1.0";
+result.iteration_id = options.IterationId;
+
+result.input_campaign_count = ...
+    numel(campaign_csv_files);
+
+result.run_count = height(combined_runs);
+result.sample_count = dataset.sample_count;
+result.example_count = dataset.example_count;
+
+result.coverage_complete = ...
+    coverage.coverage_complete;
+
+result.coverage_cell_count = ...
+    coverage.coverage_cell_count;
+
+result.observed_coverage_cell_count = ...
+    coverage.observed_coverage_cell_count;
+
+result.deficient_cell_count = ...
+    coverage.deficient_cell_count;
+
+result.dataset = dataset;
+result.coverage = coverage;
+result.planning = planning;
+
+result.paths = struct();
+result.paths.combined_campaign_csv = ...
+    string(combined_csv);
+result.paths.dataset_directory = ...
+    string(dataset_directory);
+result.paths.coverage_report = ...
+    string(coverage_mat);
+result.paths.coverage_summary = ...
+    string(summary_csv);
+result.paths.coverage_deficits = ...
+    string(deficits_csv);
+
+end
+
+
+function combined = combine_campaign_csvs(files)
+
+tables = cell(numel(files), 1);
+reference_names = strings(0, 1);
+
+for index = 1:numel(files)
+    file = files(index);
+
+    if ~isfile(file)
+        error("reqml:AdaptiveIterationCampaignCsvNotFound", ...
+            "Campaign CSV was not found: %s", file);
+    end
+
+    current = readtable( ...
+        file, ...
+        Delimiter=",", ...
+        TextType="string");
+
+    names = string(current.Properties.VariableNames);
+
+    if index == 1
+        reference_names = names;
+    elseif ~isequal(names, reference_names)
+        error("reqml:AdaptiveIterationCsvSchemaMismatch", ...
+            "All campaign CSV files must have identical columns.");
+    end
+
+    tables{index} = current;
+end
+
+combined = vertcat(tables{:});
+
+if isempty(combined)
+    error("reqml:EmptyAdaptiveIterationRuns", ...
+        "The combined campaign table contains no runs.");
+end
+
+end
+
+
+function validate_inputs(files, options)
+
+if isempty(files)
+    error("reqml:EmptyAdaptiveIterationCampaigns", ...
+        "At least one campaign CSV is required.");
+end
+
+if strlength(options.IterationId) == 0
+    error("reqml:InvalidAdaptiveIterationId", ...
+        "IterationId must be non-empty.");
+end
+
+if ~isfinite(options.PlannerSeed) || ...
+        options.PlannerSeed < 0 || ...
+        options.PlannerSeed ~= fix(options.PlannerSeed)
+
+    error("reqml:InvalidAdaptivePlannerSeed", ...
+        "PlannerSeed must be a nonnegative integer.");
+end
+
+end
