@@ -28,12 +28,12 @@ arguments
 
     options.BilayerOffsetRangeM (1,2) double = [0.015 0.035]
 
-    options.DirectionCounts (1,:) double = [4 16 32]
+    options.DirectionCounts (1,:) double = [1 16 32]
 
-    options.InPlaneCounts (1,:) double = [2 4 8]
+    options.InPlaneCounts (1,:) double = [1 4 8]
 
     options.SolidAnglesSr (1,:) double = ...
-        [0.5 pi 4*pi]
+        [0.01 pi 4*pi]
 
     options.PlannerSeed (1,1) double = 1
 end
@@ -81,6 +81,8 @@ for index = 1:numel(requests)
         stream, ...
         string(request.geometry_family), ...
         target_sws, ...
+        frequency_hz, ...
+        double(request.purity_range), ...
         options);
 
     condition = empty_condition();
@@ -132,7 +134,8 @@ end
 
 
 function [material, geometry] = materialize_geometry( ...
-        stream, family, target_sws, options)
+        stream, family, target_sws, frequency_hz, ...
+        requested_purity_range, options)
 
 material = struct();
 geometry = struct();
@@ -161,9 +164,14 @@ switch family
         geometry.normal_angle_rad = ...
             2*pi*rand(stream);
 
-        geometry.offset_m = sample_uniform( ...
-            stream, ...
-            options.BilayerOffsetRangeM);
+        geometry.offset_m = ...
+            materialize_bilayer_offset( ...
+                stream, ...
+                geometry.normal_angle_rad, ...
+                target_sws, ...
+                frequency_hz, ...
+                requested_purity_range, ...
+                options);
 
     case "circular_inclusion"
         object_sws = sample_contrasting_sws( ...
@@ -196,6 +204,55 @@ switch family
             "Unsupported geometry family '%s'.", ...
             family);
 end
+
+end
+
+
+function offset_m = materialize_bilayer_offset( ...
+        stream, normal_angle_rad, target_sws, frequency_hz, ...
+        requested_purity_range, options)
+
+domain_center = [
+    options.DomainLxM / 2
+    options.DomainLzM / 2
+    ];
+
+normal = [
+    cos(normal_angle_rad)
+    sin(normal_angle_rad)
+    ];
+
+center_projection_m = dot(normal, domain_center);
+
+purity_range = double(requested_purity_range);
+
+if numel(purity_range) ~= 2 || ...
+        any(~isfinite(purity_range))
+
+    purity_midpoint = 0.75;
+else
+    purity_midpoint = mean(purity_range);
+end
+
+purity_midpoint = min(max(purity_midpoint, 0.5), 1.0);
+
+window_length_m = ...
+    2 * target_sws / frequency_hz;
+
+% Approximate the interface distance required to obtain the requested
+% central-material fraction in a wavelength-scaled local patch.
+interface_distance_m = ...
+    (purity_midpoint - 0.5) * window_length_m;
+
+side = 1;
+
+if rand(stream) < 0.5
+    side = -1;
+end
+
+offset_m = ...
+    center_projection_m + ...
+    side * interface_distance_m;
 
 end
 

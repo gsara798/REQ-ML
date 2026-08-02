@@ -55,7 +55,16 @@ verifyTrue(testCase, ...
 
 verifyEqual(testCase, ...
     conditions(1).wavefield.direction_count, ...
-    4);
+    1);
+
+verifyEqual(testCase, ...
+    conditions(1).wavefield.in_plane_count, ...
+    1);
+
+verifyEqual(testCase, ...
+    conditions(1).wavefield.solid_angle_sr, ...
+    0.01, ...
+    AbsTol=1e-12);
 
 verifyEqual(testCase, ...
     conditions(2).wavefield.direction_count, ...
@@ -64,6 +73,51 @@ verifyEqual(testCase, ...
 verifyEqual(testCase, ...
     conditions(3).wavefield.direction_count, ...
     32);
+
+end
+
+
+function testBilayerPurityControlsInterfaceDistance(testCase)
+
+requests = make_requests();
+
+low_purity = requests(2);
+low_purity.condition_id = "bilayer_low_purity";
+low_purity.purity_bin = 1;
+low_purity.purity_range = [0.5 0.7];
+
+high_purity = requests(2);
+high_purity.condition_id = "bilayer_high_purity";
+high_purity.purity_bin = 3;
+high_purity.purity_range = [0.9 0.98];
+
+conditions = ...
+    reqml.campaigns.materializePhysicalConditions( ...
+        [low_purity; high_purity], ...
+        PlannerSeed=5001);
+
+distances = zeros(2,1);
+
+for index = 1:2
+    angle = conditions(index).geometry.normal_angle_rad;
+
+    normal = [
+        cos(angle)
+        sin(angle)
+        ];
+
+    center = [0.025; 0.025];
+
+    center_projection = dot(normal, center);
+
+    distances(index) = abs( ...
+        conditions(index).geometry.offset_m - ...
+        center_projection);
+end
+
+verifyGreaterThan(testCase, ...
+    distances(2), ...
+    distances(1));
 
 end
 

@@ -38,6 +38,8 @@ arguments
     options.RealizationsPerCondition (1,1) double = 2
 
     options.ParentCoverageReportHash (1,1) string = ""
+
+    options.ExecutedBatchPlanFile (1,1) string = ""
 end
 
 if ~isfile(previous_csv)
@@ -102,7 +104,9 @@ iteration_result = ...
         RealizationsPerCondition= ...
             options.RealizationsPerCondition, ...
         ParentCoverageReportHash= ...
-            options.ParentCoverageReportHash);
+            options.ParentCoverageReportHash, ...
+        ExecutedBatchPlanFile= ...
+            options.ExecutedBatchPlanFile);
 
 result = struct();
 

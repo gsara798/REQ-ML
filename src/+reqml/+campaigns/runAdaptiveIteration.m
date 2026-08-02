@@ -38,6 +38,8 @@ arguments
     options.RealizationsPerCondition (1,1) double = 2
 
     options.ParentCoverageReportHash (1,1) string = ""
+
+    options.ExecutedBatchPlanFile (1,1) string = ""
 end
 
 validate_inputs(campaign_csv_files, options);
@@ -112,6 +114,30 @@ deficits_csv = fullfile( ...
 writetable(coverage.summary, summary_csv);
 writetable(coverage.deficits, deficits_csv);
 
+requested_vs_achieved = table();
+requested_vs_achieved_csv = "";
+
+if strlength(options.ExecutedBatchPlanFile) > 0
+    if ~isfile(options.ExecutedBatchPlanFile)
+        error("reqml:ExecutedAdaptiveBatchPlanNotFound", ...
+            "Executed adaptive batch plan was not found: %s", ...
+            options.ExecutedBatchPlanFile);
+    end
+
+    requested_vs_achieved = ...
+        reqml.coverage.summarizeRequestedVsAchieved( ...
+            coverage.assigned_examples, ...
+            options.ExecutedBatchPlanFile);
+
+    requested_vs_achieved_csv = fullfile( ...
+        output_directory, ...
+        "requested_vs_achieved.csv");
+
+    writetable( ...
+        requested_vs_achieved, ...
+        requested_vs_achieved_csv);
+end
+
 next_batch_directory = fullfile( ...
     output_directory, ...
     "next_batch");
@@ -157,6 +183,8 @@ result.deficient_cell_count = ...
 
 result.dataset = dataset;
 result.coverage = coverage;
+result.requested_vs_achieved = ...
+    requested_vs_achieved;
 result.planning = planning;
 
 result.paths = struct();
@@ -170,6 +198,9 @@ result.paths.coverage_summary = ...
     string(summary_csv);
 result.paths.coverage_deficits = ...
     string(deficits_csv);
+
+result.paths.requested_vs_achieved = ...
+    string(requested_vs_achieved_csv);
 
 end
 
