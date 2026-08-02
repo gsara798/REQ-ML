@@ -39,13 +39,13 @@ arguments
         [0.015 0.035]
 
     options.DirectionCounts (1,:) double = ...
-        [4 16 32]
+        [1 16 32]
 
     options.InPlaneCounts (1,:) double = ...
-        [2 4 8]
+        [1 4 8]
 
     options.SolidAnglesSr (1,:) double = ...
-        [0.5 pi 4*pi]
+        [0.01 pi 4*pi]
 end
 
 requests = ...
