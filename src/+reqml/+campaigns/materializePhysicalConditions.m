@@ -128,6 +128,18 @@ for index = 1:numel(requests)
 
     condition.requested_coverage = struct();
 
+    condition.requested_coverage.sws_bin = ...
+        double(request.sws_bin);
+
+    condition.requested_coverage.sws_range_m_s = ...
+        double(request.target_sws_range_m_s);
+
+    condition.requested_coverage.frequency_bin = ...
+        double(request.frequency_bin);
+
+    condition.requested_coverage.frequency_range_hz = ...
+        double(request.target_frequency_range_hz);
+
     condition.requested_coverage.purity_bin = ...
         double(request.purity_bin);
 
@@ -414,6 +426,8 @@ required = [
     "realization_count"
     "geometry_family"
     "field_regime"
+    "sws_bin"
+    "frequency_bin"
     "target_sws_range_m_s"
     "target_frequency_range_hz"
     "purity_bin"
