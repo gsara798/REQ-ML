@@ -1,0 +1,45 @@
+{
+  "schema_name": "reqml_adaptive_campaign_config",
+  "schema_version": "1.0",
+  "campaign_id": "reqml_adaptive_smoke_v1",
+  "paths": {
+    "previous_campaign_csv": "${REPOSITORY_ROOT}/outputs/adaptive_iterations/smoke_iteration_008_dnom/accumulated_campaign_runs.csv",
+    "initial_batch_directory": "${REPOSITORY_ROOT}/outputs/adaptive_targeted/p03_d05_bilayer_retry",
+    "output_root": "${REPOSITORY_ROOT}/outputs/adaptive_config_runs/reqml_adaptive_smoke_v1",
+    "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework"
+  },
+  "simulation": {
+    "backend": "swsynth",
+    "output_directory": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns/scientific",
+    "base_config_mapping": {
+      "homogeneous": "${REPOSITORY_ROOT}/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
+      "bilayer": "${REPOSITORY_ROOT}/configs/swsynth/scientific/reqml_eikonal_training_v1/bilayer_base.json",
+      "circular_inclusion": "${REPOSITORY_ROOT}/configs/swsynth/scientific/reqml_eikonal_training_v1/circular_inclusion_base.json"
+    }
+  },
+  "coverage": {
+    "purity_edges": [0.5, 0.7, 0.9, 0.98, 1.0],
+    "nominal_angular_coverage_edges": [0, 0.01, 0.05, 0.2, 0.5, 1.0],
+    "sws_edges_m_s": [1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
+    "frequency_edges_hz": [199, 250, 350, 450, 550, 601]
+  },
+  "requirements": {
+    "minimum_examples": 1,
+    "minimum_independent_runs": 1,
+    "minimum_independent_conditions": 1,
+    "minimum_sws_bins": 1,
+    "minimum_frequency_bins": 1,
+    "minimum_geometry_seeds": 0
+  },
+  "planning": {
+    "maximum_conditions": 5,
+    "realizations_per_condition": 2
+  },
+  "execution": {
+    "maximum_iterations": 2,
+    "planner_seed": 33001,
+    "resume_runs": true,
+    "continue_on_error": false,
+    "resume_existing_loop": false
+  }
+}
