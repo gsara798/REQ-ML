@@ -1,0 +1,242 @@
+function tests = test_run_adaptive_campaign_loop
+%TEST_RUN_ADAPTIVE_CAMPAIGN_LOOP Test adaptive loop orchestration.
+
+tests = functiontests(localfunctions);
+
+end
+
+
+function setupOnce(~)
+
+root = fileparts(fileparts(fileparts( ...
+    mfilename("fullpath"))));
+
+addpath(fullfile(root, "src"));
+
+end
+
+
+function testRunsUntilCoverageIsComplete(testCase)
+
+root = string(tempname);
+
+previous_csv = fullfile(root, "previous.csv");
+initial_batch = fullfile(root, "initial_batch");
+output_root = fullfile(root, "iterations");
+framework_root = fullfile(root, "framework");
+
+mkdir(root);
+mkdir(initial_batch);
+mkdir(framework_root);
+
+write_table(previous_csv);
+write_plan(initial_batch);
+
+cleanup = onCleanup(@() cleanup_root(root));
+
+feat_cfg = struct();
+campaign_config = struct();
+campaign_config.campaign_name = "test_campaign";
+
+result = reqml.campaigns.runAdaptiveCampaignLoop( ...
+    previous_csv, ...
+    initial_batch, ...
+    feat_cfg, ...
+    campaign_config, ...
+    framework_root, ...
+    OutputRoot=output_root, ...
+    CampaignId="loop_test", ...
+    MaximumIterations=3, ...
+    PlannerSeed=100, ...
+    PurityEdges=[0.5 0.7 1.0], ...
+    DiffusivityEdges=[0 0.5 1.0], ...
+    SwsEdges=[1.5 3.0 4.0], ...
+    FrequencyEdges=[199 400 601], ...
+    ExecuteBatchFunction=@fake_execute, ...
+    AdvanceIterationFunction=@fake_advance);
+
+verifyTrue(testCase, result.coverage_complete);
+
+verifyEqual(testCase, ...
+    result.stop_reason, ...
+    "coverage_complete");
+
+verifyEqual(testCase, ...
+    result.completed_iteration_count, ...
+    2);
+
+verifyEqual(testCase, ...
+    [result.iterations.deficient_cell_count]', ...
+    [1; 0]);
+
+verifyEqual(testCase, ...
+    [result.iterations.executed_run_count]', ...
+    [2; 2]);
+
+clear cleanup
+
+end
+
+
+function execution = fake_execute( ...
+        batch_directory, simulation_framework_root, options) %#ok<INUSD>
+
+arguments
+    batch_directory
+    simulation_framework_root
+
+    options.Resume (1,1) logical = true
+    options.ContinueOnError (1,1) logical = false
+end
+
+csv_path = fullfile( ...
+    batch_directory, ...
+    "campaign_runs.csv");
+
+write_table(csv_path);
+
+execution = struct();
+
+execution.campaign_count = 1;
+execution.run_count = 2;
+execution.completed_count = 2;
+execution.skipped_count = 0;
+execution.failed_count = 0;
+execution.success = true;
+execution.campaign_csv_files = string(csv_path);
+
+end
+
+
+function result = fake_advance( ...
+        previous_csv, new_csv_files, ...
+        feat_cfg, campaign_config, options) %#ok<INUSD>
+
+arguments
+    previous_csv
+    new_csv_files
+    feat_cfg
+    campaign_config
+
+    options.OutputDirectory
+    options.IterationId
+    options.PlannerSeed
+
+    options.PurityEdges
+    options.DiffusivityEdges
+    options.SwsEdges
+    options.FrequencyEdges
+
+    options.MinimumExamples = 500
+    options.MinimumIndependentRuns = 5
+    options.MinimumSwsBins = 3
+    options.MinimumFrequencyBins = 3
+    options.MinimumIndependentConditions = 3
+    options.MinimumGeometrySeeds = 0
+
+    options.MaximumConditions = 20
+    options.RealizationsPerCondition = 2
+
+    options.ParentCoverageReportHash = ""
+    options.ExecutedBatchPlanFile = ""
+end
+
+iteration_directory = ...
+    string(options.OutputDirectory);
+
+mkdir(iteration_directory);
+
+iteration_token = extractAfter( ...
+    string(options.IterationId), ...
+    "_iteration_");
+
+iteration_number = str2double(iteration_token);
+
+assert( ...
+    isfinite(iteration_number) && ...
+    iteration_number >= 1 && ...
+    iteration_number == fix(iteration_number));
+
+accumulated_csv = fullfile( ...
+    iteration_directory, ...
+    "accumulated_campaign_runs.csv");
+
+write_table(accumulated_csv);
+
+is_complete = iteration_number >= 2;
+
+if ~is_complete
+    next_batch = fullfile( ...
+        iteration_directory, ...
+        "next_batch");
+
+    mkdir(next_batch);
+    write_plan(next_batch);
+end
+
+iteration = struct();
+
+iteration.example_count = ...
+    10 * iteration_number;
+
+iteration.observed_coverage_cell_count = ...
+    2 + iteration_number;
+
+iteration.deficient_cell_count = ...
+    double(~is_complete);
+
+iteration.coverage_complete = is_complete;
+
+iteration.planning = struct();
+iteration.planning.batch_required = ~is_complete;
+
+result = struct();
+
+result.accumulated_run_count = ...
+    2 * iteration_number;
+
+result.iteration = iteration;
+
+result.paths = struct();
+
+result.paths.accumulated_campaign_csv = ...
+    string(accumulated_csv);
+
+end
+
+
+function write_plan(directory)
+
+path_value = fullfile( ...
+    directory, ...
+    "adaptive_batch_plan.json");
+
+file_id = fopen(path_value, "w");
+assert(file_id >= 0);
+
+cleanup = onCleanup(@() fclose(file_id));
+fprintf(file_id, "{}");
+
+clear cleanup
+
+end
+
+
+function write_table(path_value)
+
+value = table( ...
+    [1; 2], ...
+    VariableNames="ordinal");
+
+writetable(value, path_value);
+
+end
+
+
+function cleanup_root(root)
+
+if isfolder(root)
+    rmdir(root, "s");
+end
+
+end
