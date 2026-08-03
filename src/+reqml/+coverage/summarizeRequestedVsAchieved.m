@@ -113,10 +113,12 @@ for index = 1:condition_count
         double(condition.wavefield.frequency_hz);
 
     background_cs_m_s(index) = ...
-        double(condition.material.background_cs_m_s);
+        resolve_optional_scalar( ...
+            condition.material.background_cs_m_s);
 
     object_cs_m_s(index) = ...
-        double(condition.material.object_cs_m_s);
+        resolve_optional_scalar( ...
+            condition.material.object_cs_m_s);
 
     direction_count(index) = ...
         double(condition.wavefield.direction_count);
@@ -312,6 +314,34 @@ counts = accumarray(groups, 1);
 purity_bin = unique_pairs(index, 1);
 diffusivity_bin = unique_pairs(index, 2);
 fraction = maximum_count / size(pairs, 1);
+
+end
+
+
+function value = resolve_optional_scalar(candidate)
+
+if isempty(candidate)
+    value = NaN;
+    return
+end
+
+candidate = double(candidate(:));
+candidate = candidate(isfinite(candidate));
+
+if isempty(candidate)
+    value = NaN;
+    return
+end
+
+candidate = unique(candidate);
+
+if numel(candidate) ~= 1
+    error("reqml:InconsistentRequestedConditionMetadata", ...
+        ["Expected optional condition metadata to contain " ...
+         "at most one finite scalar value."]);
+end
+
+value = candidate;
 
 end
 
