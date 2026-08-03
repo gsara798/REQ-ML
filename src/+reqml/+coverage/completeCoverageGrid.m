@@ -1,29 +1,68 @@
 function complete = completeCoverageGrid( ...
-    summary, purity_edges, diffusivity_edges)
-%COMPLETECOVERAGEGRID Add unobserved purity-diffusivity cells with zero counts.
+    summary, sws_edges, frequency_edges, ...
+    purity_edges, diffusivity_edges)
+%COMPLETECOVERAGEGRID Add every configured 4-D coverage cell.
 %
-% Coverage must be evaluated over the complete configured grid, not only
-% over cells that happened to receive examples.
+% A coverage cell is defined by:
+%
+%   SWS bin
+%   frequency bin
+%   purity bin
+%   diffusivity / nominal-angular-coverage bin
+%
+% Coverage must be evaluated over the complete configured grid, including
+% cells that received no examples.
 
 arguments
     summary table
+    sws_edges (1,:) double
+    frequency_edges (1,:) double
     purity_edges (1,:) double
     diffusivity_edges (1,:) double
 end
 
+validate_edges(sws_edges, "sws_edges");
+validate_edges(frequency_edges, "frequency_edges");
 validate_edges(purity_edges, "purity_edges");
 validate_edges(diffusivity_edges, "diffusivity_edges");
 
+sws_bin_count = numel(sws_edges) - 1;
+frequency_bin_count = numel(frequency_edges) - 1;
 purity_bin_count = numel(purity_edges) - 1;
 diffusivity_bin_count = numel(diffusivity_edges) - 1;
 
-[purity_grid, diffusivity_grid] = ndgrid( ...
-    1:purity_bin_count, ...
-    1:diffusivity_bin_count);
+[ ...
+    sws_grid, ...
+    frequency_grid, ...
+    purity_grid, ...
+    diffusivity_grid ...
+    ] = ndgrid( ...
+        1:sws_bin_count, ...
+        1:frequency_bin_count, ...
+        1:purity_bin_count, ...
+        1:diffusivity_bin_count);
 
 complete = table();
+
+complete.sws_bin = sws_grid(:);
+complete.frequency_bin = frequency_grid(:);
 complete.purity_bin = purity_grid(:);
 complete.diffusivity_bin = diffusivity_grid(:);
+
+complete.cell_key = compose( ...
+    "s%02d_f%02d_p%02d_d%02d", ...
+    complete.sws_bin, ...
+    complete.frequency_bin, ...
+    complete.purity_bin, ...
+    complete.diffusivity_bin);
+
+complete.sws_label = make_bin_labels( ...
+    complete.sws_bin, ...
+    sws_edges);
+
+complete.frequency_label = make_bin_labels( ...
+    complete.frequency_bin, ...
+    frequency_edges);
 
 complete.purity_label = make_bin_labels( ...
     complete.purity_bin, ...
@@ -33,10 +72,11 @@ complete.diffusivity_label = make_bin_labels( ...
     complete.diffusivity_bin, ...
     diffusivity_edges);
 
-complete.example_count = zeros(height(complete), 1);
-complete.independent_run_count = zeros(height(complete), 1);
-complete.sws_bin_count = zeros(height(complete), 1);
-complete.frequency_bin_count = zeros(height(complete), 1);
+complete.example_count = ...
+    zeros(height(complete), 1);
+
+complete.independent_run_count = ...
+    zeros(height(complete), 1);
 
 if ismember( ...
         "independent_condition_count", ...
@@ -58,38 +98,73 @@ if isempty(summary)
     return
 end
 
+required_summary_variables = [
+    "sws_bin"
+    "frequency_bin"
+    "purity_bin"
+    "diffusivity_bin"
+    "example_count"
+    "independent_run_count"
+    ];
+
+validate_summary_variables( ...
+    summary, ...
+    required_summary_variables);
+
+key_variables = [
+    "sws_bin"
+    "frequency_bin"
+    "purity_bin"
+    "diffusivity_bin"
+    ];
+
 [found, location] = ismember( ...
-    complete(:, ["purity_bin", "diffusivity_bin"]), ...
-    summary(:, ["purity_bin", "diffusivity_bin"]), ...
+    complete(:, key_variables), ...
+    summary(:, key_variables), ...
     "rows");
 
 source_variables = [
     "example_count"
     "independent_run_count"
-    "sws_bin_count"
-    "frequency_bin_count"
     "independent_condition_count"
     "geometry_seed_count"
     ];
 
-available_summary = string(summary.Properties.VariableNames);
-available_complete = string(complete.Properties.VariableNames);
+available_summary = string( ...
+    summary.Properties.VariableNames);
+
+available_complete = string( ...
+    complete.Properties.VariableNames);
 
 for variable = source_variables.'
     if ~ismember(variable, available_summary) || ...
             ~ismember(variable, available_complete)
+
         continue
     end
 
     values = complete.(variable);
-    values(found) = summary.(variable)(location(found));
+
+    values(found) = ...
+        summary.(variable)(location(found));
+
     complete.(variable) = values;
 end
 
+complete = sortrows( ...
+    complete, ...
+    [ ...
+        "sws_bin"
+        "frequency_bin"
+        "purity_bin"
+        "diffusivity_bin"
+    ]);
+
 end
 
 
-function labels = make_bin_labels(bin_indices, edges)
+function labels = make_bin_labels( ...
+        bin_indices, edges)
 
 labels = strings(numel(bin_indices), 1);
 
@@ -112,13 +187,32 @@ end
 end
 
 
+function validate_summary_variables( ...
+        summary, required)
+
+available = string( ...
+    summary.Properties.VariableNames);
+
+for variable = required.'
+    if ~ismember(variable, available)
+        error( ...
+            "reqml:MissingCoverageSummaryVariable", ...
+            "Coverage summary is missing variable '%s'.", ...
+            variable);
+    end
+end
+
+end
+
+
 function validate_edges(edges, name)
 
 if numel(edges) < 2 || ...
         any(~isfinite(edges)) || ...
         any(diff(edges) <= 0)
 
-    error("reqml:InvalidCoverageEdges", ...
+    error( ...
+        "reqml:InvalidCoverageEdges", ...
         "%s must contain finite increasing values.", ...
         name);
 end

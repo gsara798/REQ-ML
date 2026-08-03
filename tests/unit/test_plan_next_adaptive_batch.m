@@ -216,6 +216,9 @@ function report = make_coverage_report()
 
 deficits = table();
 
+deficits.sws_bin = [2; 3];
+deficits.frequency_bin = [2; 3];
+
 deficits.purity_bin = [1; 3];
 deficits.diffusivity_bin = [1; 3];
 
@@ -227,8 +230,6 @@ deficits.diffusivity_label = ...
 
 deficits.example_deficit = [400; 200];
 deficits.independent_run_deficit = [4; 2];
-deficits.sws_bin_deficit = [2; 1];
-deficits.frequency_bin_deficit = [2; 1];
 
 deficits.independent_condition_deficit = ...
     [3; 1];

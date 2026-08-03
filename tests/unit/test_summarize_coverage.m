@@ -1,5 +1,5 @@
 function tests = test_summarize_coverage
-%TEST_SUMMARIZE_COVERAGE Test patch coverage summaries.
+%TEST_SUMMARIZE_COVERAGE
 
 tests = functiontests(localfunctions);
 
@@ -16,77 +16,159 @@ addpath(fullfile(root, "src"));
 end
 
 
-function testSummarizesCountsAndIndependentRuns(testCase)
+function testGroupsByFullFourDimensionalCell(testCase)
 
-examples = table();
+assigned = make_assigned_examples();
 
-examples.truth_material_purity = ...
-    [0.55; 0.60; 0.75; 0.76; 0.95];
-
-examples.campaign_angular_entropy = ...
-    [0.20; 0.25; 0.50; 0.55; 0.85];
-
-examples.truth_cs_center_m_s = ...
-    [1.8; 2.8; 2.2; 3.2; 4.0];
-
-examples.campaign_frequency_hz = ...
-    [200; 400; 400; 500; 600];
-
-examples.campaign_run_id = ...
-    ["run_1"; "run_2"; "run_2"; "run_3"; "run_4"];
-
-assigned = reqml.coverage.assignCoverageBins( ...
-    examples, ...
-    PurityEdges=[0.5 0.7 0.9 1.0], ...
-    DiffusivityEdges=[0 0.4 0.7 1.0], ...
-    SwsEdges=[1.5 2.5 3.5 4.1], ...
-    FrequencyEdges=[199 350 450 550 601]);
-
-summary = reqml.coverage.summarizeCoverage(assigned);
+summary = reqml.coverage.summarizeCoverage( ...
+    assigned, ...
+    RunVariable="campaign_run_id", ...
+    ConditionVariable="campaign_condition_id");
 
 verifyEqual(testCase, height(summary), 3);
 
 verifyEqual(testCase, ...
+    summary.cell_key, ...
+    [ ...
+        "s01_f01_p01_d01"
+        "s01_f02_p01_d01"
+        "s02_f01_p01_d01"
+    ]);
+
+verifyEqual(testCase, ...
     summary.example_count, ...
-    [2; 2; 1]);
+    [2; 1; 2]);
 
 verifyEqual(testCase, ...
     summary.independent_run_count, ...
-    [2; 2; 1]);
+    [2; 1; 2]);
 
 verifyEqual(testCase, ...
-    summary.sws_bin_count, ...
-    [2; 2; 1]);
+    summary.independent_condition_count, ...
+    [1; 1; 2]);
 
 verifyEqual(testCase, ...
-    summary.frequency_bin_count, ...
-    [2; 2; 1]);
+    summary.sws_label, ...
+    [ ...
+        "[1.5,2)"
+        "[1.5,2)"
+        "[2,2.5)"
+    ]);
+
+verifyEqual(testCase, ...
+    summary.frequency_label, ...
+    [ ...
+        "[199,250)"
+        "[250,350)"
+        "[199,250)"
+    ]);
 
 end
 
 
-function testIgnoresInvalidExamples(testCase)
+function testIgnoresInvalidRows(testCase)
 
-examples = table();
+assigned = make_assigned_examples();
 
-examples.truth_material_purity = [0.3; 0.8];
-examples.campaign_angular_entropy = [0.2; 0.5];
-examples.truth_cs_center_m_s = [2.0; 3.0];
-examples.campaign_frequency_hz = [200; 400];
-examples.campaign_run_id = ["run_1"; "run_2"];
+assigned.coverage_valid(1) = false;
 
-assigned = reqml.coverage.assignCoverageBins( ...
-    examples, ...
-    PurityEdges=[0.5 0.7 0.9 1.0], ...
-    DiffusivityEdges=[0 0.4 0.7 1.0], ...
-    SwsEdges=[1.5 2.5 3.5 4.1], ...
-    FrequencyEdges=[199 350 450 601]);
+summary = reqml.coverage.summarizeCoverage( ...
+    assigned, ...
+    RunVariable="campaign_run_id");
 
-summary = reqml.coverage.summarizeCoverage(assigned);
+verifyEqual(testCase, ...
+    sum(summary.example_count), ...
+    4);
 
-verifyEqual(testCase, height(summary), 1);
-verifyEqual(testCase, summary.example_count, 1);
-verifyEqual(testCase, summary.purity_bin, 2);
-verifyEqual(testCase, summary.diffusivity_bin, 2);
+verifyFalse(testCase, ...
+    any(summary.example_count == 0));
+
+end
+
+
+function testReturnsTypedEmptySummary(testCase)
+
+assigned = make_assigned_examples();
+assigned.coverage_valid(:) = false;
+
+summary = reqml.coverage.summarizeCoverage( ...
+    assigned);
+
+verifyEqual(testCase, height(summary), 0);
+
+verifyEqual(testCase, ...
+    string(summary.Properties.VariableNames), ...
+    [ ...
+        "sws_bin"
+        "frequency_bin"
+        "purity_bin"
+        "diffusivity_bin"
+        "cell_key"
+        "sws_label"
+        "frequency_label"
+        "purity_label"
+        "diffusivity_label"
+        "example_count"
+        "independent_run_count"
+    ]');
+
+end
+
+
+function assigned = make_assigned_examples()
+
+assigned = table();
+
+assigned.coverage_sws_bin = ...
+    [1; 1; 1; 2; 2];
+
+assigned.coverage_frequency_bin = ...
+    [1; 1; 2; 1; 1];
+
+assigned.coverage_purity_bin = ...
+    [1; 1; 1; 1; 1];
+
+assigned.coverage_diffusivity_bin = ...
+    [1; 1; 1; 1; 1];
+
+assigned.coverage_sws_label = [
+    "[1.5,2)"
+    "[1.5,2)"
+    "[1.5,2)"
+    "[2,2.5)"
+    "[2,2.5)"
+    ];
+
+assigned.coverage_frequency_label = [
+    "[199,250)"
+    "[199,250)"
+    "[250,350)"
+    "[199,250)"
+    "[199,250)"
+    ];
+
+assigned.coverage_purity_label = ...
+    repmat("[0.5,0.7)", 5, 1);
+
+assigned.coverage_diffusivity_label = ...
+    repmat("[0,0.01)", 5, 1);
+
+assigned.coverage_valid = true(5,1);
+
+assigned.campaign_run_id = [
+    "run_1"
+    "run_2"
+    "run_3"
+    "run_4"
+    "run_5"
+    ];
+
+assigned.campaign_condition_id = [
+    "condition_a"
+    "condition_a"
+    "condition_b"
+    "condition_c"
+    "condition_d"
+    ];
 
 end
