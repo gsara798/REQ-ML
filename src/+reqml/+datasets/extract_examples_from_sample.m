@@ -14,6 +14,21 @@ arguments
     options.SampleId (1,1) string = "sample"
     options.StepX (1,1) double = NaN
     options.StepZ (1,1) double = NaN
+    options.CenterIndices (:,2) double = zeros(0,2)
+    options.RequestedCoverageCells table = table()
+
+    options.PurityEdges (1,:) double = zeros(1,0)
+    options.DiffusivityEdges (1,:) double = zeros(1,0)
+    options.SwsEdges (1,:) double = zeros(1,0)
+    options.FrequencyEdges (1,:) double = zeros(1,0)
+
+    options.DiffusivityValue (1,1) double = NaN
+    options.CandidateStepPixels (1,1) double = 1
+    options.MaximumCentersPerCell (1,1) double = 8
+    options.MinimumCenterDistancePixels (1,1) double = 0
+    options.MinimumValidFraction (1,1) double = 1
+    options.CenterSelectionSeed (1,1) double = 1
+
     options.StoreReqCurves (1,1) logical = false
     options.UseWindowParfor (1,1) logical = false
     options.Estimator (1,1) function_handle = ...
@@ -24,6 +39,47 @@ validate_loaded_sample(data);
 validate_feature_config(feat_cfg);
 
 cfg = build_physical_config(data);
+
+if ~isempty(options.CenterIndices) && ...
+        ~isempty(options.RequestedCoverageCells)
+    error("reqml:ConflictingCenterSelectionOptions", ...
+        ["CenterIndices and RequestedCoverageCells cannot both ", ...
+         "be provided."]);
+end
+
+center_selection = table();
+center_indices = options.CenterIndices;
+
+if ~isempty(options.RequestedCoverageCells)
+    validate_coverage_center_options(options);
+
+    center_selection = ...
+        reqml.datasets.selectCoverageCenters( ...
+            data.truth, ...
+            feat_cfg.win_size, ...
+            options.RequestedCoverageCells, ...
+            PurityEdges=options.PurityEdges, ...
+            DiffusivityEdges=options.DiffusivityEdges, ...
+            SwsEdges=options.SwsEdges, ...
+            FrequencyEdges=options.FrequencyEdges, ...
+            FrequencyHz=double(data.frequency_hz), ...
+            DiffusivityValue=options.DiffusivityValue, ...
+            CandidateStepPixels=options.CandidateStepPixels, ...
+            MaximumPerCell=options.MaximumCentersPerCell, ...
+            MinimumCenterDistancePixels= ...
+                options.MinimumCenterDistancePixels, ...
+            MinimumValidFraction=options.MinimumValidFraction, ...
+            RandomSeed=options.CenterSelectionSeed);
+
+    if isempty(center_selection)
+        error("reqml:NoCoverageCentersSelected", ...
+            ["No valid patch centers were found for the requested ", ...
+             "coverage cells."]);
+    end
+
+    center_indices = ...
+        center_selection{:, ["cx", "cz"]};
+end
 
 estimator_args = {
     "QuantileMode", "local_req"
@@ -40,6 +96,12 @@ end
 
 if isfinite(options.StepZ)
     estimator_args(end + 1, :) = {"StepZ", options.StepZ};
+end
+
+if ~isempty(center_indices)
+    estimator_args(end + 1, :) = { ...
+        "CenterIndices", ...
+        center_indices};
 end
 
 estimator_args = reshape(estimator_args.', 1, []);
@@ -93,6 +155,7 @@ dataset.dataset_id = options.DatasetId;
 dataset.sample_id = options.SampleId;
 dataset.examples = examples;
 dataset.estimator = estimator_out;
+dataset.center_selection = center_selection;
 dataset.sample_summary = make_summary( ...
     examples, ...
     data, ...
@@ -100,6 +163,34 @@ dataset.sample_summary = make_summary( ...
     options.SampleId);
 
 end
+
+function validate_coverage_center_options(options)
+
+required_edges = {
+    options.PurityEdges, "PurityEdges"
+    options.DiffusivityEdges, "DiffusivityEdges"
+    options.SwsEdges, "SwsEdges"
+    options.FrequencyEdges, "FrequencyEdges"
+    };
+
+for index = 1:size(required_edges, 1)
+    edges = required_edges{index, 1};
+    name = required_edges{index, 2};
+
+    if numel(edges) < 2
+        error("reqml:MissingCoverageCenterEdges", ...
+            "%s must contain at least two edges.", name);
+    end
+end
+
+if ~isfinite(options.DiffusivityValue)
+    error("reqml:MissingCoverageCenterDiffusivity", ...
+        ["DiffusivityValue must be finite when ", ...
+         "RequestedCoverageCells is provided."]);
+end
+
+end
+
 
 function validate_loaded_sample(data)
 
