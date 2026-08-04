@@ -78,7 +78,7 @@
     "planner_seed": 43001,
     "resume_runs": true,
     "continue_on_error": false,
-    "resume_existing_loop": true
+    "resume_existing_loop": false
   },
   "directed_center_selection": {
     "enabled": true,
