@@ -146,7 +146,7 @@ end
 
 
 function out = fake_explicit_center_estimator( ...
-    ~, ~, ~, varargin)
+    ~, ~, feat_cfg, varargin)
 
 center_indices = [];
 
@@ -172,8 +172,8 @@ rows.req_mapping = repmat({fake_mapping()}, n, 1);
 
 out = struct();
 out.feature_table = rows;
-out.half_win = 1;
-out.win_size = 3;
+out.win_size = double(feat_cfg.win_size);
+out.half_win = floor(out.win_size / 2);
 out.center_indices = center_indices;
 
 end
@@ -181,7 +181,7 @@ end
 
 function testSelectsCentersForMultipleRequestedCells(testCase)
 
-data = make_loaded_sample();
+data = make_large_loaded_sample();
 feat_cfg = struct("win_size", 3, "M", 2);
 
 requested = table( ...
@@ -249,6 +249,34 @@ keys = compose( ...
     requested.frequency_bin, ...
     requested.purity_bin, ...
     requested.diffusivity_bin);
+
+end
+
+
+function data = make_large_loaded_sample()
+
+Nz = 51;
+Nx = 51;
+
+cs = 2 * ones(Nz, Nx);
+cs(:, 32:end) = 4;
+
+material = ones(Nz, Nx, "uint16");
+material(:, 32:end) = 2;
+
+data = struct();
+data.wavefield_zx = complex(ones(Nz, Nx), 0.25);
+data.dx_m = 0.5e-3;
+data.dz_m = 0.5e-3;
+data.frequency_hz = 500;
+
+data.generator = struct();
+data.generator.backend = "swsynth";
+
+data.truth = struct();
+data.truth.cs_m_s_zx = cs;
+data.truth.material_id_zx = material;
+data.truth.valid_mask_zx = true(Nz, Nx);
 
 end
 

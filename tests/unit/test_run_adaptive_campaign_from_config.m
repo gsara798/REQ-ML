@@ -133,6 +133,13 @@ arguments
     options.MaximumConditions
     options.RealizationsPerCondition
 
+    options.UseDirectedCenterSelection (1,1) logical = false
+    options.CandidateStepPixels (1,1) double = 2
+    options.MaximumCentersPerCell (1,1) double = 4
+    options.MinimumCenterDistanceFraction (1,1) double = 0.5
+    options.MinimumValidFraction (1,1) double = 1
+    options.CenterSelectionSeedOffset (1,1) double = 0
+
     options.Resume
     options.ContinueOnError
     options.ResumeExistingLoop
