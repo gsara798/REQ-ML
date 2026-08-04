@@ -1,0 +1,147 @@
+{
+  "schema_name": "reqml_analytic_bilayer_smoke_config",
+  "schema_version": "1.0",
+  "campaign_id": "reqml_analytic_bilayer_angular_smoke_v1",
+  "planner_seed": 72001,
+  "acceptance_target": 0.0,
+  "output_directory": "${REPOSITORY_ROOT}/outputs/validation/reqml_analytic_bilayer_angular_smoke_v1",
+  "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework",
+  "simulation": {
+    "output_directory": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns/validation/reqml_analytic_bilayer_angular_smoke_v1",
+    "base_config_mapping": {
+      "homogeneous": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
+      "bilayer": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/bilayer_base.json",
+      "circular_inclusion": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/circular_inclusion_base.json"
+    }
+  },
+  "geometry_control": {
+    "domain_size_m": [
+      0.05,
+      0.05
+    ],
+    "grid_spacing_m": [
+      0.0005,
+      0.0005
+    ],
+    "patch_window_wavelengths": 3,
+    "cs_guess_m_s": 3.0,
+    "selected_patch_center_indices_xz": [
+      51,
+      51
+    ],
+    "interface_orientation": "x",
+    "minimum_domain_margin_pixels": 0
+  },
+  "coverage": {
+    "purity_edges": [
+      0.5,
+      0.7,
+      0.9,
+      0.98,
+      1.0
+    ],
+    "nominal_angular_coverage_edges": [
+      0,
+      0.01,
+      0.05,
+      0.2,
+      0.5,
+      1.0
+    ],
+    "sws_edges_m_s": [
+      1.5,
+      2.0,
+      2.5,
+      3.0,
+      3.5,
+      4.0
+    ],
+    "frequency_edges_hz": [
+      199,
+      250,
+      350,
+      450,
+      550,
+      601
+    ]
+  },
+  "requests": [
+    {
+      "condition_id": "angular_s03_d02",
+      "realization_count": 1,
+      "sws_bin": 3,
+      "frequency_bin": 1,
+      "purity_bin": 3,
+      "diffusivity_bin": 2,
+      "target_sws_range_m_s": [
+        2.5,
+        3.0
+      ],
+      "target_frequency_range_hz": [
+        210,
+        240
+      ],
+      "purity_range": [
+        0.9,
+        0.98
+      ],
+      "nominal_angular_coverage_range": [
+        0.01,
+        0.05
+      ]
+    },
+    {
+      "condition_id": "angular_s03_d04",
+      "realization_count": 1,
+      "sws_bin": 3,
+      "frequency_bin": 1,
+      "purity_bin": 3,
+      "diffusivity_bin": 4,
+      "target_sws_range_m_s": [
+        2.5,
+        3.0
+      ],
+      "target_frequency_range_hz": [
+        210,
+        240
+      ],
+      "purity_range": [
+        0.9,
+        0.98
+      ],
+      "nominal_angular_coverage_range": [
+        0.2,
+        0.5
+      ]
+    },
+    {
+      "condition_id": "angular_s03_d05",
+      "realization_count": 1,
+      "sws_bin": 3,
+      "frequency_bin": 1,
+      "purity_bin": 3,
+      "diffusivity_bin": 5,
+      "target_sws_range_m_s": [
+        2.5,
+        3.0
+      ],
+      "target_frequency_range_hz": [
+        210,
+        240
+      ],
+      "purity_range": [
+        0.9,
+        0.98
+      ],
+      "nominal_angular_coverage_range": [
+        0.5,
+        1.0
+      ]
+    }
+  ],
+  "angular_field": {
+    "axis_mode": "seeded_uniform_in_plane",
+    "in_plane_policy": "fixed_fraction",
+    "in_plane_fraction": 0.25
+  }
+}

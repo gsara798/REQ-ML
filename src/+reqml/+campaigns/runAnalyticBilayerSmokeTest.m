@@ -31,6 +31,8 @@ campaign_config.output = struct( ...
     "directory", string(config.simulation.output_directory));
 campaign_config.analytic_bilayer = config.geometry_control;
 
+angular_policy = resolve_angular_field_policy(config);
+
 requests = normalize_requests(config.requests);
 
 physical_conditions = ...
@@ -51,7 +53,18 @@ physical_conditions = ...
         MinimumDomainMarginPixels=double( ...
             config.geometry_control. ...
                 minimum_domain_margin_pixels), ...
+        AngularAxisMode=angular_policy.axis_mode, ...
+        InPlanePolicy=angular_policy.in_plane_policy, ...
+        InPlaneFraction=angular_policy.in_plane_fraction, ...
         PlannerSeed=double(config.planner_seed));
+
+angular_audit = audit_angular_fields( ...
+    physical_conditions, angular_policy);
+
+if ~angular_audit.acceptance_met
+    error("reqml:AngularFieldSmokeAuditFailed", ...
+        "Angular field audit failed before simulation execution.");
+end
 
 batch_directory = fullfile(output_directory, "batch");
 paths = reqml.campaigns.writeAdaptiveBatch( ...
@@ -142,6 +155,8 @@ report.combined_campaign_csv = string(combined_csv);
 report.dataset_directory = string(dataset.paths.output_directory);
 report.generated_simulation_output_directory = ...
     string(config.simulation.output_directory);
+report.angular_field = angular_policy;
+report.angular_audit = angular_audit;
 
 report_path = fullfile( ...
     output_directory, "analytic_bilayer_smoke_report.json");
@@ -150,6 +165,101 @@ report.report_path = string(report_path);
 report.condition_summary = condition_summary;
 
 end
+
+
+
+function policy = resolve_angular_field_policy(config)
+
+policy = struct( ...
+    "axis_mode", "fixed", ...
+    "in_plane_policy", "legacy_sqrt", ...
+    "in_plane_fraction", 0.25);
+
+if ~isfield(config, "angular_field")
+    return
+end
+
+angular = config.angular_field;
+
+if isfield(angular, "axis_mode")
+    policy.axis_mode = string(angular.axis_mode);
+end
+
+if isfield(angular, "in_plane_policy")
+    policy.in_plane_policy = string(angular.in_plane_policy);
+end
+
+if isfield(angular, "in_plane_fraction")
+    policy.in_plane_fraction = ...
+        double(angular.in_plane_fraction);
+end
+
+end
+
+
+function audit = audit_angular_fields(conditions, policy)
+
+condition_count = numel(conditions);
+
+axes_xyz = zeros(condition_count, 3);
+direction_counts = zeros(condition_count, 1);
+in_plane_counts = zeros(condition_count, 1);
+expected_in_plane_counts = zeros(condition_count, 1);
+
+for index = 1:condition_count
+    field = conditions(index).wavefield;
+
+    axes_xyz(index, :) = double(field.axis_xyz);
+    direction_counts(index) = double(field.direction_count);
+    in_plane_counts(index) = double(field.in_plane_count);
+
+    if policy.in_plane_policy == "fixed_fraction"
+        expected_in_plane_counts(index) = min( ...
+            direction_counts(index), ...
+            max(1, round( ...
+                policy.in_plane_fraction * ...
+                direction_counts(index))));
+    else
+        expected_in_plane_counts(index) = min( ...
+            direction_counts(index), ...
+            max(1, round(sqrt(direction_counts(index)))));
+    end
+end
+
+axis_norms = vecnorm(axes_xyz, 2, 2);
+unique_axes = unique(round(axes_xyz, 12), "rows");
+
+audit = struct();
+audit.condition_count = condition_count;
+audit.axes_xyz = axes_xyz;
+audit.direction_counts = direction_counts;
+audit.in_plane_counts = in_plane_counts;
+audit.expected_in_plane_counts = expected_in_plane_counts;
+audit.maximum_axis_norm_error = ...
+    max(abs(axis_norms - 1));
+audit.maximum_out_of_plane_component = ...
+    max(abs(axes_xyz(:, 2)));
+audit.unique_axis_count = size(unique_axes, 1);
+audit.reproducible_policy = true;
+audit.in_plane_count_match = ...
+    all(in_plane_counts == expected_in_plane_counts);
+
+if policy.axis_mode == "seeded_uniform_in_plane"
+    audit.axis_diversity_met = ...
+        condition_count <= 1 || ...
+        audit.unique_axis_count > 1;
+else
+    audit.axis_diversity_met = true;
+end
+
+audit.acceptance_met = ...
+    audit.maximum_axis_norm_error <= 1e-12 && ...
+    audit.maximum_out_of_plane_component <= 1e-12 && ...
+    audit.in_plane_count_match && ...
+    audit.axis_diversity_met;
+
+end
+
 
 
 function requests = normalize_requests(raw)
