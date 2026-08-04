@@ -82,6 +82,35 @@ verifyEqual(testCase, string(get_basename( ...
 end
 
 
+function testFinalCampaignConfigUsesProductionPoliciesAndIsolatedPaths(testCase)
+campaign_id="reqml_adaptive_scientific_4d_final";
+config_file=fullfile(testCase.TestData.repository_root,"configs", ...
+    "adaptive",campaign_id+".json");
+text=string(fileread(config_file)); config=jsondecode(text);
+verifyEqual(testCase,string(config.campaign_id),campaign_id);
+verifyEqual(testCase,double(config.execution.maximum_iterations),15);
+verifyFalse(testCase,logical(config.execution.resume_existing_loop));
+verifyEqual(testCase,string(config.center_selection.mode), ...
+    "analytic_deficit_aware_final");
+verifyEqual(testCase, ...
+    double(config.center_selection.analytic_to_opportunistic_separation_fraction),.25);
+verifyEqual(testCase, ...
+    double(config.center_selection.different_cell_separation_fraction),.25);
+verifyEqual(testCase, ...
+    double(config.center_selection.same_cell_separation_fraction),.5);
+verifyEqual(testCase,string(config.domain_policy.mode), ...
+    "adaptive_for_center_packing");
+verifyEqual(testCase,double(config.domain_policy.default_size_m(:))',[.05 .05]);
+verifyEqual(testCase,double(config.domain_policy.expanded_size_m(:))',[.07 .07]);
+verifyFalse(testCase,contains(text,"reqml_adaptive_scientific_4d_v2"));
+verifyFalse(testCase,contains(text,"reqml_adaptive_scientific_4d_v3"));
+verifyFalse(testCase,contains(text,"reqml_adaptive_scientific_4d_v4"));
+verifyEqual(testCase,string(get_basename(config.paths.output_root)),campaign_id);
+verifyEqual(testCase,string(get_basename(config.simulation.output_directory)), ...
+    campaign_id);
+end
+
+
 function testRejectsExistingReqmlOutput(testCase)
 
 [root, config_file, config] = make_fixture_config(testCase);

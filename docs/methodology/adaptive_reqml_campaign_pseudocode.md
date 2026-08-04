@@ -320,7 +320,12 @@ FOR each new analytic bilayer run:
         eligible = candidates whose achieved_cell was deficient in
                    pre_iteration_state
         enforce at most 2 useful centers per cell per run
-        enforce center separation >= 0.75 W
+        IF final relationship-aware mode:
+            enforce target-to-opportunistic separation >= 0.25 W
+            enforce different-cell separation >= 0.25 W
+            enforce same-cell separation >= 0.50 W
+        ELSE IF V4 uniform-separation mode:
+            enforce center separation >= 0.75 W
         choose by run deficit, condition deficit, example deficit,
                   deficit score, never-observed status, distance,
                   deterministic seeded tie-break
@@ -334,6 +339,20 @@ FOR each new analytic bilayer run:
 The target is never replaced. Multiple selected patches remain examples from
 one simulation run and one physical condition; coverage independence is still
 computed with unique `run_id` and `condition_id` values.
+
+Before final-mode materialization, place the analytic target at the low legal
+tangential edge and keep the interface-normal coordinate centered. Evaluate
+whether the normal `0.05 m x 0.05 m` domain can hold the target plus one
+additional center at `0.25 W`; select `0.07 m x 0.07 m` only when it cannot.
+Recompute the analytic interface from the selected center so the signed
+center-interface offset and discrete purity are preserved.
+
+After coverage aggregation, choose the next action from the actual residual
+deficits. Reuse a condition with increasing realization indices for run or
+example deficits, create and rematerialize a condition for a condition
+deficit, and never directly request a complete cell. Persist expected
+example, run, and condition contributions for comparison with the subsequent
+coverage report.
 
 ```text
 IF low-purity bins are deficient:

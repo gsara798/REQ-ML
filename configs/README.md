@@ -26,3 +26,12 @@ centers through `center_selection.mode`. Its outputs are isolated from V2 and
 V3. See `docs/methodology/deficit_aware_bilayer_centers.md` for the selection
 contract and `docs/methodology/analytic_bilayer_v4_deficit_center_pilot.md`
 for the ten-iteration result.
+
+The production configuration is
+`adaptive/reqml_adaptive_scientific_4d_final.json`. It combines the guaranteed
+analytic target with relationship-aware center separation, packing-aware
+target placement, conditional domain expansion, and residual-deficit run
+scheduling. Its first execution is limited to 15 iterations and uses a fresh
+campaign identity and output paths. See
+`docs/methodology/final_adaptive_dataset_generation.md` for the algorithm,
+preflight evidence, and resume criteria.
