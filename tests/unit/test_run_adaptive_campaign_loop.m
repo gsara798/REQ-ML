@@ -387,12 +387,25 @@ arguments
 
     options.ParentCoverageReportHash = ""
     options.ExecutedBatchPlanFile = ""
+    options.PreviousDatasetDirectory (1,1) string = ""
 end
 
 iteration_directory = ...
     string(options.OutputDirectory);
 
 mkdir(iteration_directory);
+
+dataset_directory = fullfile( ...
+    iteration_directory, ...
+    "dataset");
+
+[created, message] = mkdir(dataset_directory);
+
+if ~created && ~isfolder(dataset_directory)
+    error("reqml:TestDatasetDirectoryCreateFailed", ...
+        "Could not create fake dataset directory '%s': %s", ...
+        dataset_directory, message);
+end
 
 iteration_token = extractAfter( ...
     string(options.IterationId), ...

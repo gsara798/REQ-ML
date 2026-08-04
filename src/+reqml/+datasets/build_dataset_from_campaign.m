@@ -38,6 +38,7 @@ arguments
     options.UseWindowParfor (1,1) logical = false
     options.OutputDirectory (1,1) string = ""
     options.SaveOutputs (1,1) logical = true
+    options.PreviousDatasetDirectory (1,1) string = ""
     options.TheoryClassMapping (:,1) struct = struct.empty
 
     options.Loader (1,1) function_handle = ...
@@ -55,16 +56,38 @@ inventory = reqml.datasets.load_campaign_samples( ...
     MaxSamples=options.MaxSamples, ...
     RequireBackend=options.RequireBackend);
 
-sample_count = inventory.sample_count;
+previous_dataset = load_previous_dataset( ...
+    options.PreviousDatasetDirectory, ...
+    feat_cfg, ...
+    options);
 
-example_tables = cell(sample_count, 1);
+processing_samples = inventory.samples;
+
+if previous_dataset.available
+    previous_run_ids = string( ...
+        previous_dataset.samples.run_id);
+
+    current_run_ids = string( ...
+        processing_samples.run_id);
+
+    is_new_run = ~ismember( ...
+        current_run_ids, ...
+        previous_run_ids);
+
+    processing_samples = ...
+        processing_samples(is_new_run, :);
+end
+
+new_sample_count = height(processing_samples);
+
+example_tables = cell(new_sample_count, 1);
 summary_records = repmat( ...
     empty_summary_record(), ...
-    sample_count, ...
+    new_sample_count, ...
     1);
 
-for sample_index = 1:sample_count
-    run = inventory.samples(sample_index, :);
+for sample_index = 1:new_sample_count
+    run = processing_samples(sample_index, :);
 
     data = options.Loader( ...
         run.wavefield_sample_path);
@@ -239,8 +262,29 @@ for sample_index = 1:sample_count
             extraction.sample_summary);
 end
 
-examples = vertcat(example_tables{:});
-sample_summaries = struct2table(summary_records);
+if new_sample_count > 0
+    new_examples = vertcat(example_tables{:});
+    new_sample_summaries = ...
+        struct2table(summary_records);
+else
+    new_examples = table();
+    new_sample_summaries = table();
+end
+
+if previous_dataset.available
+    examples = concatenate_compatible_tables( ...
+        previous_dataset.examples, ...
+        new_examples, ...
+        "examples");
+
+    sample_summaries = concatenate_compatible_tables( ...
+        previous_dataset.sample_summaries, ...
+        new_sample_summaries, ...
+        "sample summaries");
+else
+    examples = new_examples;
+    sample_summaries = new_sample_summaries;
+end
 
 if numel(unique(examples.example_id)) ~= height(examples)
     error("reqml:DuplicateCampaignExampleId", ...
@@ -257,8 +301,13 @@ dataset.schema_name = "reqml_campaign_dataset";
 dataset.schema_version = "1.0";
 dataset.dataset_id = options.DatasetId;
 dataset.campaign_runs_csv = string(campaign_runs_csv);
-dataset.sample_count = sample_count;
+dataset.sample_count = inventory.sample_count;
 dataset.example_count = height(examples);
+dataset.previous_sample_count = ...
+    previous_dataset.sample_count;
+dataset.new_sample_count = new_sample_count;
+dataset.reused_sample_count = ...
+    previous_dataset.sample_count;
 dataset.inventory = inventory;
 dataset.sample_summaries = sample_summaries;
 dataset.examples = examples;
@@ -283,6 +332,204 @@ else
 end
 
 end
+
+function previous = load_previous_dataset( ...
+        directory, feat_cfg, options)
+
+previous = struct();
+previous.available = false;
+previous.sample_count = 0;
+previous.samples = table();
+previous.examples = table();
+previous.sample_summaries = table();
+
+if strlength(directory) == 0
+    return
+end
+
+directory = string(directory);
+
+required_paths = struct();
+required_paths.examples = fullfile( ...
+    directory, ...
+    "examples.mat");
+required_paths.samples = fullfile( ...
+    directory, ...
+    "samples.csv");
+required_paths.sample_summaries = fullfile( ...
+    directory, ...
+    "sample_summaries.csv");
+required_paths.manifest = fullfile( ...
+    directory, ...
+    "dataset_manifest.json");
+
+names = string(fieldnames(required_paths));
+
+for index = 1:numel(names)
+    name = names(index);
+    path_value = required_paths.(name);
+
+    if ~isfile(path_value)
+        error("reqml:PreviousDatasetArtifactNotFound", ...
+            "Previous dataset artifact was not found: %s", ...
+            path_value);
+    end
+end
+
+loaded = load( ...
+    required_paths.examples, ...
+    "examples");
+
+if ~isfield(loaded, "examples") || ...
+        ~istable(loaded.examples)
+    error("reqml:InvalidPreviousDatasetExamples", ...
+        "Previous examples MAT file must contain table 'examples'.");
+end
+
+samples = readtable( ...
+    required_paths.samples, ...
+    Delimiter=",", ...
+    TextType="string");
+
+sample_summaries = readtable( ...
+    required_paths.sample_summaries, ...
+    Delimiter=",", ...
+    TextType="string");
+
+manifest = jsondecode( ...
+    fileread(required_paths.manifest));
+
+validate_previous_dataset_compatibility( ...
+    manifest, ...
+    feat_cfg, ...
+    options);
+
+if ~ismember("run_id", ...
+        string(samples.Properties.VariableNames))
+    error("reqml:PreviousDatasetRunIdNotFound", ...
+        "Previous samples table does not contain run_id.");
+end
+
+if numel(unique(string(samples.run_id))) ~= ...
+        height(samples)
+    error("reqml:DuplicatePreviousDatasetRunId", ...
+        "Previous samples table contains duplicate run IDs.");
+end
+
+previous.available = true;
+previous.sample_count = height(samples);
+previous.samples = samples;
+previous.examples = loaded.examples;
+previous.sample_summaries = sample_summaries;
+
+end
+
+
+function validate_previous_dataset_compatibility( ...
+        manifest, feat_cfg, options)
+
+if ~isfield(manifest, "feature_config") || ...
+        ~isfield(manifest, "build_config")
+    error("reqml:PreviousDatasetManifestIncomplete", ...
+        "Previous dataset manifest lacks configuration metadata.");
+end
+
+expected_feature_config = ...
+    canonicalize_json_value(feat_cfg);
+
+previous_feature_config = ...
+    canonicalize_json_value(manifest.feature_config);
+
+if ~isequaln( ...
+        orderfields(previous_feature_config), ...
+        orderfields(expected_feature_config))
+    error("reqml:PreviousDatasetFeatureConfigMismatch", ...
+        "Previous dataset feature configuration is incompatible.");
+end
+
+expected_build_config = ...
+    make_build_config(options);
+
+previous_build_config = ...
+    manifest.build_config;
+
+% These fields do not change how an individual sample is extracted.
+ignored_fields = [
+    "dataset_id"
+    "max_samples"
+    ];
+
+for index = 1:numel(ignored_fields)
+    field_name = ignored_fields(index);
+
+    if isfield(expected_build_config, field_name)
+        expected_build_config = rmfield( ...
+            expected_build_config, ...
+            field_name);
+    end
+
+    if isfield(previous_build_config, field_name)
+        previous_build_config = rmfield( ...
+            previous_build_config, ...
+            field_name);
+    end
+end
+
+expected_build_config = ...
+    canonicalize_json_value(expected_build_config);
+
+previous_build_config = ...
+    canonicalize_json_value(previous_build_config);
+
+if ~isequaln( ...
+        orderfields(previous_build_config), ...
+        orderfields(expected_build_config))
+    error("reqml:PreviousDatasetBuildConfigMismatch", ...
+        "Previous dataset build configuration is incompatible.");
+end
+
+end
+
+
+function value = canonicalize_json_value(value)
+
+value = jsondecode(jsonencode(value));
+
+end
+
+
+function combined = concatenate_compatible_tables( ...
+        previous, current, description)
+
+if isempty(previous)
+    combined = current;
+    return
+end
+
+if isempty(current)
+    combined = previous;
+    return
+end
+
+previous_names = string( ...
+    previous.Properties.VariableNames);
+
+current_names = string( ...
+    current.Properties.VariableNames);
+
+if ~isequal(previous_names, current_names)
+    error("reqml:IncrementalDatasetSchemaMismatch", ...
+        "Previous and current %s tables have different schemas.", ...
+        description);
+end
+
+combined = [
+    previous
+    current
+    ];
+
+end
+
 
 function completed = complete_feature_config(requested)
 
@@ -633,6 +880,24 @@ config.store_req_curves = ...
     options.StoreReqCurves;
 config.use_window_parfor = ...
     options.UseWindowParfor;
+
+config.use_directed_center_selection = ...
+    options.UseDirectedCenterSelection;
+config.purity_edges = options.PurityEdges;
+config.diffusivity_edges = options.DiffusivityEdges;
+config.sws_edges = options.SwsEdges;
+config.frequency_edges = options.FrequencyEdges;
+config.candidate_step_pixels = ...
+    options.CandidateStepPixels;
+config.maximum_centers_per_cell = ...
+    options.MaximumCentersPerCell;
+config.minimum_center_distance_fraction = ...
+    options.MinimumCenterDistanceFraction;
+config.minimum_valid_fraction = ...
+    options.MinimumValidFraction;
+config.center_selection_seed_offset = ...
+    options.CenterSelectionSeedOffset;
+
 config.theory_class_mapping = ...
     options.TheoryClassMapping;
 config.target_definition = ...
@@ -651,6 +916,12 @@ manifest.campaign_runs_csv = ...
     dataset.campaign_runs_csv;
 manifest.sample_count = dataset.sample_count;
 manifest.example_count = dataset.example_count;
+manifest.previous_sample_count = ...
+    dataset.previous_sample_count;
+manifest.new_sample_count = ...
+    dataset.new_sample_count;
+manifest.reused_sample_count = ...
+    dataset.reused_sample_count;
 manifest.target_column = ...
     "q_target_from_center_truth";
 manifest.target_definition = ...

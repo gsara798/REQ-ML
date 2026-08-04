@@ -181,6 +181,129 @@ clear cleanup_fixture_guard
 
 end
 
+function testIncrementalBuildProcessesOnlyNewRuns(testCase)
+
+fixture = create_campaign_fixture();
+cleanup_fixture_guard = ...
+    onCleanup(@() cleanup_fixture(fixture));
+
+previous_output = string(tempname);
+current_output = string(tempname);
+
+cleanup_previous = onCleanup(@() ...
+    cleanup_directory(previous_output));
+
+cleanup_current = onCleanup(@() ...
+    cleanup_directory(current_output));
+
+feat_cfg = struct("win_size", 3, "M", 2);
+
+counting_loader("__reset__");
+
+previous = reqml.datasets.build_dataset_from_campaign( ...
+    fixture.csv_file, ...
+    feat_cfg, ...
+    DatasetId="incremental_previous_v1", ...
+    OutputDirectory=previous_output, ...
+    SaveOutputs=true, ...
+    Loader=@counting_loader, ...
+    ReadinessEvaluator=@fake_readiness, ...
+    Extractor=@fake_extractor);
+
+verifyEqual(testCase, ...
+    counting_loader("__count__"), ...
+    2);
+
+verifyEqual(testCase, previous.sample_count, 2);
+verifyEqual(testCase, previous.example_count, 4);
+
+runs = readtable( ...
+    fixture.csv_file, ...
+    Delimiter=",", ...
+    TextType="string");
+
+third_sample_path = fullfile( ...
+    fixture.root, ...
+    "sample_3.mat");
+
+placeholder = 3; %#ok<NASGU>
+save(third_sample_path, "placeholder");
+
+third = runs(2, :);
+third.ordinal = 3;
+third.design_id = "design_incremental";
+third.condition_id = "condition_incremental";
+third.run_id = "run_000003";
+third.hash_sha256 = "hash_3";
+third.seed = 3103;
+third.wavefield_sample_path = third_sample_path;
+
+accumulated_runs = [
+    runs
+    third
+    ];
+
+accumulated_csv = fullfile( ...
+    fixture.root, ...
+    "accumulated_campaign_runs.csv");
+
+writetable( ...
+    accumulated_runs, ...
+    accumulated_csv, ...
+    Delimiter=",");
+
+counting_loader("__reset__");
+
+current = reqml.datasets.build_dataset_from_campaign( ...
+    accumulated_csv, ...
+    feat_cfg, ...
+    DatasetId="incremental_current_v1", ...
+    OutputDirectory=current_output, ...
+    SaveOutputs=true, ...
+    PreviousDatasetDirectory=previous_output, ...
+    Loader=@counting_loader, ...
+    ReadinessEvaluator=@fake_readiness, ...
+    Extractor=@fake_extractor);
+
+verifyEqual(testCase, ...
+    counting_loader("__count__"), ...
+    1);
+
+verifyEqual(testCase, current.sample_count, 3);
+verifyEqual(testCase, current.previous_sample_count, 2);
+verifyEqual(testCase, current.reused_sample_count, 2);
+verifyEqual(testCase, current.new_sample_count, 1);
+verifyEqual(testCase, current.example_count, 6);
+
+verifyEqual(testCase, ...
+    current.examples.campaign_run_id, ...
+    ["run_000001"; "run_000001"; ...
+     "run_000002"; "run_000002"; ...
+     "run_000003"; "run_000003"]);
+
+verifyEqual(testCase, ...
+    height(current.sample_summaries), ...
+    3);
+
+verifyEqual(testCase, ...
+    double(current.manifest.previous_sample_count), ...
+    2);
+
+verifyEqual(testCase, ...
+    double(current.manifest.new_sample_count), ...
+    1);
+
+verifyEqual(testCase, ...
+    double(current.manifest.reused_sample_count), ...
+    2);
+
+clear cleanup_current
+clear cleanup_previous
+clear cleanup_fixture_guard
+
+end
+
+
 function testBuildsDatasetWithDirectedMultiBinCenters(testCase)
 
 fixture = create_campaign_fixture();
@@ -359,6 +482,33 @@ extraction.sample_summary.example_count = n;
 extraction.sample_summary.valid_example_count = n;
 extraction.sample_summary.minimum_material_purity = 0.5;
 extraction.sample_summary.median_material_purity = 0.85;
+
+end
+
+
+function value = counting_loader(sample_file)
+
+persistent call_count
+
+if isempty(call_count)
+    call_count = 0;
+end
+
+command = string(sample_file);
+
+if command == "__reset__"
+    call_count = 0;
+    value = [];
+    return
+end
+
+if command == "__count__"
+    value = call_count;
+    return
+end
+
+call_count = call_count + 1;
+value = fake_loader(sample_file);
 
 end
 
