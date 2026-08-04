@@ -118,6 +118,56 @@ verifyNotEqual(testCase, seeds_a(1), seeds_a(2));
 end
 
 
+
+function testExportsAngularAxisWhenPresent(testCase)
+
+condition = make_condition("homogeneous");
+condition.wavefield.axis_xyz = [0.6 0 0.8];
+
+runs = reqml.campaigns. ...
+    physicalConditionToSwsynthRuns(condition);
+
+paths = string({runs(1).overrides.path})';
+index = find(paths == "directions.support.axis_xyz", 1);
+
+verifyNotEmpty(testCase, index);
+verifyEqual(testCase, ...
+    double(runs(1).overrides(index).value), ...
+    [0.6 0 0.8], ...
+    AbsTol=1e-12);
+
+end
+
+
+function testLegacyConditionDoesNotExportAngularAxis(testCase)
+
+condition = make_condition("homogeneous");
+
+runs = reqml.campaigns. ...
+    physicalConditionToSwsynthRuns(condition);
+
+paths = string({runs(1).overrides.path})';
+
+verifyFalse(testCase, ...
+    ismember("directions.support.axis_xyz", paths));
+
+end
+
+
+function testRejectsInvalidAngularAxis(testCase)
+
+condition = make_condition("homogeneous");
+condition.wavefield.axis_xyz = [0 0 0];
+
+verifyError(testCase, ...
+    @() reqml.campaigns. ...
+        physicalConditionToSwsynthRuns(condition), ...
+    "reqml:InvalidSwsynthPhysicalCondition");
+
+end
+
+
+
 function seeds = extract_seed_values(runs)
 
 seeds = zeros(numel(runs), 1);

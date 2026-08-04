@@ -248,6 +248,58 @@ verifyLessThanOrEqual(testCase, local_sws, 2.5);
 end
 
 
+
+function testExplicitFinalAngularPolicyIsMaterialized(testCase)
+
+requests = make_requests();
+request = requests(2);
+request.condition_id = "explicit_angular_policy";
+
+condition = reqml.campaigns.materializePhysicalConditions( ...
+    request, ...
+    TrainingGeometryMode="analytic_bilayer", ...
+    AngularAxisMode="seeded_uniform_in_plane", ...
+    InPlanePolicy="fixed_fraction", ...
+    InPlaneFraction=0.25, ...
+    PlannerSeed=1234);
+
+field = condition.wavefield;
+
+verifyEqual(testCase, field.axis_mode, ...
+    "seeded_uniform_in_plane");
+verifyEqual(testCase, field.in_plane_policy, ...
+    "fixed_fraction");
+verifyEqual(testCase, field.axis_xyz(2), 0, AbsTol=1e-12);
+verifyEqual(testCase, norm(field.axis_xyz), 1, AbsTol=1e-12);
+verifyEqual(testCase, ...
+    field.in_plane_count, ...
+    min(field.direction_count, ...
+        max(1, round(0.25 * field.direction_count))));
+
+end
+
+
+function testAnalyticBilayerRetainsLegacyAngularDefaults(testCase)
+
+requests = make_requests();
+request = requests(2);
+request.condition_id = "legacy_analytic_angular_policy";
+
+condition = reqml.campaigns.materializePhysicalConditions( ...
+    request, ...
+    TrainingGeometryMode="analytic_bilayer", ...
+    PlannerSeed=1234);
+
+field = condition.wavefield;
+
+verifyEqual(testCase, field.axis_mode, "fixed");
+verifyEqual(testCase, field.axis_xyz, [1 0 0], AbsTol=1e-12);
+verifyEqual(testCase, field.in_plane_policy, "legacy_sqrt");
+
+end
+
+
+
 function requests = make_requests()
 
 requests = repmat(struct( ...

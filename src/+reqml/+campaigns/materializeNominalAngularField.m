@@ -14,6 +14,12 @@ arguments
     options.MaximumDirectionCount (1,1) double = 128
     options.MinimumSolidAngleSr (1,1) double = 0.01
     options.MaximumSolidAngleSr (1,1) double = 4*pi
+
+    options.AxisMode (1,1) string = "fixed"
+    options.FixedAxisXYZ (1,3) double = [1 0 0]
+
+    options.InPlanePolicy (1,1) string = "legacy_sqrt"
+    options.InPlaneFraction (1,1) double = 0.25
 end
 
 validate_inputs(target_range, options);
@@ -63,6 +69,51 @@ direction_count = randi( ...
     stream, ...
     [minimum_count, maximum_feasible_count]);
 
+switch options.AxisMode
+    case "fixed"
+        axis_xyz = double(options.FixedAxisXYZ);
+
+    case "seeded_uniform_in_plane"
+        axis_angle_rad = 2*pi*rand(stream);
+        axis_xyz = [
+            cos(axis_angle_rad), ...
+            0, ...
+            sin(axis_angle_rad)];
+
+    otherwise
+        error("reqml:InvalidAngularAxisMode", ...
+            ["AxisMode must be fixed or " + ...
+             "seeded_uniform_in_plane."]);
+end
+
+axis_norm = norm(axis_xyz);
+
+if ~isfinite(axis_norm) || axis_norm <= 0
+    error("reqml:InvalidAngularAxis", ...
+        "The angular support axis must be finite and nonzero.");
+end
+
+axis_xyz = axis_xyz / axis_norm;
+axis_angle_rad = atan2(axis_xyz(3), axis_xyz(1));
+
+switch options.InPlanePolicy
+    case "legacy_sqrt"
+        in_plane_count = min( ...
+            direction_count, ...
+            max(1, round(sqrt(direction_count))));
+
+    case "fixed_fraction"
+        in_plane_count = min( ...
+            direction_count, ...
+            max(1, round( ...
+                options.InPlaneFraction * direction_count)));
+
+    otherwise
+        error("reqml:InvalidInPlanePolicy", ...
+            ["InPlanePolicy must be legacy_sqrt or " + ...
+             "fixed_fraction."]);
+end
+
 solid_angle_sr = ...
     maximum_angle * ...
     target_dnom * ...
@@ -88,6 +139,14 @@ field.direction_count = direction_count;
 field.solid_angle_sr = solid_angle_sr;
 field.maximum_direction_count = maximum_count;
 field.maximum_solid_angle_sr = maximum_angle;
+
+field.axis_mode = options.AxisMode;
+field.axis_xyz = axis_xyz;
+field.axis_angle_rad = axis_angle_rad;
+
+field.in_plane_policy = options.InPlanePolicy;
+field.in_plane_fraction = options.InPlaneFraction;
+field.in_plane_count = in_plane_count;
 
 end
 
@@ -119,6 +178,33 @@ if options.MinimumSolidAngleSr <= 0 || ...
     error("reqml:InvalidNominalSolidAngleLimits", ...
         ["Solid-angle limits must satisfy " ...
          "0 < minimum < maximum <= 4*pi."]);
+end
+
+if ~ismember(options.AxisMode, ...
+        ["fixed", "seeded_uniform_in_plane"])
+    error("reqml:InvalidAngularAxisMode", ...
+        ["AxisMode must be fixed or " + ...
+         "seeded_uniform_in_plane."]);
+end
+
+if any(~isfinite(options.FixedAxisXYZ)) || ...
+        norm(options.FixedAxisXYZ) <= 0
+    error("reqml:InvalidAngularAxis", ...
+        "FixedAxisXYZ must be finite and nonzero.");
+end
+
+if ~ismember(options.InPlanePolicy, ...
+        ["legacy_sqrt", "fixed_fraction"])
+    error("reqml:InvalidInPlanePolicy", ...
+        ["InPlanePolicy must be legacy_sqrt or " + ...
+         "fixed_fraction."]);
+end
+
+if ~isfinite(options.InPlaneFraction) || ...
+        options.InPlaneFraction <= 0 || ...
+        options.InPlaneFraction > 1
+    error("reqml:InvalidInPlaneFraction", ...
+        "InPlaneFraction must satisfy 0 < value <= 1.");
 end
 
 end

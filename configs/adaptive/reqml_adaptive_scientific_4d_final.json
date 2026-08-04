@@ -11,7 +11,9 @@
     "batch_id": "reqml_adaptive_scientific_4d_final_bootstrap",
     "planner_seed": 52001,
     "realizations_per_condition": 2,
-    "geometry_families": ["bilayer"],
+    "geometry_families": [
+      "bilayer"
+    ],
     "purity_cycle_stride": 1,
     "diffusivity_cycle_stride": 2
   },
@@ -25,10 +27,37 @@
     }
   },
   "coverage": {
-    "purity_edges": [0.5, 0.7, 0.9, 0.98, 1.0],
-    "nominal_angular_coverage_edges": [0, 0.01, 0.05, 0.2, 0.5, 1.0],
-    "sws_edges_m_s": [1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
-    "frequency_edges_hz": [199, 250, 350, 450, 550, 601]
+    "purity_edges": [
+      0.5,
+      0.7,
+      0.9,
+      0.98,
+      1.0
+    ],
+    "nominal_angular_coverage_edges": [
+      0,
+      0.01,
+      0.05,
+      0.2,
+      0.5,
+      1.0
+    ],
+    "sws_edges_m_s": [
+      1.5,
+      2.0,
+      2.5,
+      3.0,
+      3.5,
+      4.0
+    ],
+    "frequency_edges_hz": [
+      199,
+      250,
+      350,
+      450,
+      550,
+      601
+    ]
   },
   "requirements": {
     "minimum_examples": 4,
@@ -58,15 +87,26 @@
     "maximum_centers_per_cell_per_run": 2,
     "analytic_to_opportunistic_separation_fraction": 0.25,
     "different_cell_separation_fraction": 0.25,
-    "same_cell_separation_fraction": 0.50,
+    "same_cell_separation_fraction": 0.5,
     "minimum_center_separation_fraction": 0.75,
     "minimum_valid_fraction": 1.0,
     "seed_offset": 0
   },
   "domain_policy": {
     "mode": "adaptive_for_center_packing",
-    "default_size_m": [0.05, 0.05],
-    "expanded_size_m": [0.07, 0.07],
+    "default_size_m": [
+      0.05,
+      0.05
+    ],
+    "expanded_size_m": [
+      0.07,
+      0.07
+    ],
     "minimum_packable_centers": 2
+  },
+  "angular_field": {
+    "axis_mode": "seeded_uniform_in_plane",
+    "in_plane_policy": "fixed_fraction",
+    "in_plane_fraction": 0.25
   }
 }

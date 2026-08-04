@@ -97,6 +97,7 @@ training_geometry_mode = resolve_training_geometry_mode( ...
     campaign_config);
 analytic = resolve_analytic_bilayer_config(campaign_config);
 final_policy=resolve_final_policy(campaign_config,analytic);
+angular_policy=resolve_angular_field_policy(campaign_config);
 
 if training_geometry_mode == "legacy_balanced"
     analytic.domain_size_m = [ ...
@@ -150,6 +151,9 @@ physical_conditions = ...
         AnalyticToOpportunisticSeparationFraction= ...
             final_policy.analytic_to_opportunistic_fraction, ...
         StableConditionSeedFromId=final_policy.stable_condition_seed, ...
+        AngularAxisMode=angular_policy.axis_mode, ...
+        InPlanePolicy=angular_policy.in_plane_policy, ...
+        InPlaneFraction=angular_policy.in_plane_fraction, ...
         PlannerSeed=options.PlannerSeed);
 
 paths = reqml.campaigns.writeAdaptiveBatch( ...
@@ -206,6 +210,36 @@ policy.analytic_to_opportunistic_fraction=double( ...
     selection.analytic_to_opportunistic_separation_fraction);
 policy.stable_condition_seed=true;
 end
+
+
+
+function policy = resolve_angular_field_policy(campaign_config)
+
+policy = struct( ...
+    "axis_mode", "fixed", ...
+    "in_plane_policy", "legacy_sqrt", ...
+    "in_plane_fraction", 0.25);
+
+if ~isfield(campaign_config, "angular_field")
+    return
+end
+
+angular = campaign_config.angular_field;
+
+if isfield(angular, "axis_mode")
+    policy.axis_mode = string(angular.axis_mode);
+end
+
+if isfield(angular, "in_plane_policy")
+    policy.in_plane_policy = string(angular.in_plane_policy);
+end
+
+if isfield(angular, "in_plane_fraction")
+    policy.in_plane_fraction = double(angular.in_plane_fraction);
+end
+
+end
+
 
 
 function mode = resolve_training_geometry_mode(campaign_config)
