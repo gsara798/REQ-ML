@@ -373,8 +373,8 @@ pool = gcp("nocreate");
 
 if ~isempty(pool) && isa(pool, "parallel.ThreadPool")
     fprintf( ...
-        ["Closing thread-based parallel pool because MAT v7.3 " ...
-         "samples require process workers.\n"]);
+        "Closing thread-based parallel pool because MAT v7.3 " + ...
+        "samples require process workers.\n");
 
     delete(pool);
     pool = [];
