@@ -22,6 +22,10 @@ arguments
     options.MaximumCentersPerRun (1,1) double = 12
     options.MaximumCentersPerCellPerRun (1,1) double = 2
     options.MinimumCenterSeparationFraction (1,1) double = 0.75
+    options.SeparationPolicy (1,1) string = "uniform"
+    options.AnalyticToOpportunisticSeparationFraction (1,1) double = 0.25
+    options.DifferentCellSeparationFraction (1,1) double = 0.25
+    options.SameCellSeparationFraction (1,1) double = 0.50
     options.MinimumValidFraction (1,1) double = 1
     options.RealizationsPerCondition (1,1) double = 2
     options.DeterministicSeed (1,1) double = 1
@@ -184,9 +188,10 @@ while numel(selected_indices) < options.MaximumCentersPerRun
             continue
         end
 
-        distance = nearest_distance(candidates(index,:), ...
-            candidates(selected_indices,:));
-        if distance < minimum_distance
+        selected_candidates = candidates(selected_indices,:);
+        [distance,separation_satisfied] = evaluate_separation( ...
+            candidates(index,:),selected_candidates,win_size,options);
+        if ~separation_satisfied
             rejections.insufficient_spatial_separation = ...
                 rejections.insufficient_spatial_separation + 1;
             continue
@@ -268,6 +273,12 @@ result = struct();
 result.centers = selection;
 result.rejection_counts = struct2table(rejections);
 result.minimum_center_separation_pixels = minimum_distance;
+result.separation_policy = options.SeparationPolicy;
+result.relationship_separation_pixels = struct( ...
+    "analytic_to_opportunistic", ...
+        options.AnalyticToOpportunisticSeparationFraction*win_size, ...
+    "different_cell",options.DifferentCellSeparationFraction*win_size, ...
+    "same_cell",options.SameCellSeparationFraction*win_size);
 result.analytic_target_matches_requested_cell = ...
     ~selection.target_cell_mismatch(1);
 
@@ -320,6 +331,30 @@ end
 function value = nearest_distance(row, selected)
 value = min(hypot(double(selected.cx)-double(row.cx), ...
     double(selected.cz)-double(row.cz)));
+end
+
+function [nearest,satisfied] = evaluate_separation(row,selected,win,options)
+distances=hypot(double(selected.cx)-double(row.cx), ...
+    double(selected.cz)-double(row.cz));
+nearest=min(distances);
+if options.SeparationPolicy=="uniform"
+    required=repmat(options.MinimumCenterSeparationFraction*win, ...
+        height(selected),1);
+elseif options.SeparationPolicy=="relationship_aware"
+    required=zeros(height(selected),1);
+    required(1)=options.AnalyticToOpportunisticSeparationFraction*win;
+    for i=2:height(selected)
+        if selected.achieved_cell_key(i)==row.achieved_cell_key
+            required(i)=options.SameCellSeparationFraction*win;
+        else
+            required(i)=options.DifferentCellSeparationFraction*win;
+        end
+    end
+else
+    error("reqml:InvalidCenterSeparationPolicy", ...
+        "Unsupported center separation policy '%s'.",options.SeparationPolicy);
+end
+satisfied=all(distances>=required);
 end
 
 function tf = lexicographically_greater(a,b)
@@ -392,5 +427,14 @@ if ~ismember(lower(options.InterfaceOrientation),["x","z"])
 end
 if options.MaximumCentersPerRun < 1 || options.MaximumCentersPerCellPerRun < 1
     error("reqml:InvalidDeficitAwareCenterQuota","Center quotas must be positive.");
+end
+fractions=[options.MinimumCenterSeparationFraction, ...
+    options.AnalyticToOpportunisticSeparationFraction, ...
+    options.DifferentCellSeparationFraction, ...
+    options.SameCellSeparationFraction];
+if any(~isfinite(fractions)) || any(fractions<0) || ...
+        ~ismember(options.SeparationPolicy,["uniform","relationship_aware"])
+    error("reqml:InvalidCenterSeparationPolicy", ...
+        "Center separation policy or fractions are invalid.");
 end
 end

@@ -137,6 +137,24 @@ for sws_bin = 1:sws_bin_count
         request.source_run_deficit = 0;
         request.source_condition_deficit = 0;
 
+        request.requested_cell_key = compose( ...
+            "s%02d_f%02d_p%02d_d%02d",sws_bin,frequency_bin, ...
+            purity_bin,diffusivity_bin);
+        request.residual_example_deficit = 2*options.RealizationsPerCondition;
+        request.residual_independent_run_deficit = ...
+            options.RealizationsPerCondition;
+        request.residual_independent_condition_deficit = 1;
+        request.planned_action = "new_condition";
+        request.planned_realization_count = options.RealizationsPerCondition;
+        request.planned_new_condition_count = 1;
+        request.reason_for_repeat = "bootstrap new physical condition";
+        request.expected_example_contribution = ...
+            2*options.RealizationsPerCondition;
+        request.expected_independent_run_contribution = ...
+            options.RealizationsPerCondition;
+        request.expected_independent_condition_contribution = 1;
+        request.realization_start_index = 1;
+
         requests(ordinal) = request;
     end
 end
@@ -318,5 +336,17 @@ request = struct( ...
     "source_example_deficit", 0, ...
     "source_run_deficit", 0, ...
     "source_condition_deficit", 0);
+request.requested_cell_key = "";
+request.residual_example_deficit = 0;
+request.residual_independent_run_deficit = 0;
+request.residual_independent_condition_deficit = 0;
+request.planned_action = "new_condition";
+request.planned_realization_count = 0;
+request.planned_new_condition_count = 0;
+request.reason_for_repeat = "";
+request.expected_example_contribution = 0;
+request.expected_independent_run_contribution = 0;
+request.expected_independent_condition_contribution = 0;
+request.realization_start_index = 1;
 
 end

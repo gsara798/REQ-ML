@@ -143,6 +143,9 @@ arguments
     options.MaximumCentersPerRun (1,1) double = 12
     options.MaximumCentersPerCellPerRun (1,1) double = 2
     options.MinimumCenterSeparationFraction (1,1) double = 0.75
+    options.AnalyticToOpportunisticSeparationFraction (1,1) double = 0.25
+    options.DifferentCellSeparationFraction (1,1) double = 0.25
+    options.SameCellSeparationFraction (1,1) double = 0.50
     options.UseSampleParfor (1,1) logical = false
 
     options.Resume

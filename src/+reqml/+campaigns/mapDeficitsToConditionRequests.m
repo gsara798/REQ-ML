@@ -13,6 +13,8 @@ arguments
     options.RealizationsPerCondition (1,1) double = 2
     options.PlannerSeed (1,1) double = 1
     options.ConditionIdPrefix (1,1) string = "adaptive"
+    options.SchedulingMode (1,1) string = "legacy"
+    options.MaximumExamplesPerRun (1,1) double = 2
 end
 
 validate_report(coverage_report);
@@ -25,6 +27,13 @@ validate_positive_integer( ...
 validate_nonnegative_integer( ...
     options.PlannerSeed, ...
     "PlannerSeed");
+validate_positive_integer( ...
+    options.MaximumExamplesPerRun, ...
+    "MaximumExamplesPerRun");
+if ~ismember(options.SchedulingMode,["legacy","residual_deficit_aware"])
+    error("reqml:InvalidAdaptivePlannerOption", ...
+        "SchedulingMode must be legacy or residual_deficit_aware.");
+end
 
 condition_id_prefix = validate_condition_id_prefix( ...
     options.ConditionIdPrefix);
@@ -142,6 +151,22 @@ for index = 1:request_count
     requests(index).source_condition_deficit = ...
         double( ...
             deficits.independent_condition_deficit(index));
+
+    requests(index).requested_cell_key = compose( ...
+        "s%02d_f%02d_p%02d_d%02d",sws_bin,frequency_bin, ...
+        purity_bin,diffusivity_bin);
+    requests(index).residual_example_deficit = ...
+        requests(index).source_example_deficit;
+    requests(index).residual_independent_run_deficit = ...
+        requests(index).source_run_deficit;
+    requests(index).residual_independent_condition_deficit = ...
+        requests(index).source_condition_deficit;
+
+    if options.SchedulingMode=="residual_deficit_aware"
+        requests(index) = plan_residual_action( ...
+            requests(index),coverage_report.assigned_examples, ...
+            options.RealizationsPerCondition,options.MaximumExamplesPerRun);
+    end
 end
 
 end
@@ -315,6 +340,76 @@ request = struct( ...
     "source_example_deficit", 0, ...
     "source_run_deficit", 0, ...
     "source_condition_deficit", 0);
+
+request.requested_cell_key = "";
+request.residual_example_deficit = 0;
+request.residual_independent_run_deficit = 0;
+request.residual_independent_condition_deficit = 0;
+request.planned_action = "new_condition";
+request.planned_realization_count = 0;
+request.planned_new_condition_count = 0;
+request.reason_for_repeat = "";
+request.expected_example_contribution = 0;
+request.expected_independent_run_contribution = 0;
+request.expected_independent_condition_contribution = 0;
+request.realization_start_index = 1;
+
+end
+
+
+function request = plan_residual_action(request,assigned,base_realizations, ...
+        examples_per_run)
+
+existing_condition="";
+next_realization=1;
+names=string(assigned.Properties.VariableNames);
+if all(ismember(["requested_condition_cell_key","campaign_condition_id", ...
+        "campaign_realization_id"],names))
+    mask=string(assigned.requested_condition_cell_key)==request.requested_cell_key;
+    if ismember("center_selection_role",names)
+        mask=mask & string(assigned.center_selection_role)=="analytic_target";
+    end
+    condition_ids=sort(unique(string(assigned.campaign_condition_id(mask))));
+    if ~isempty(condition_ids)
+        existing_condition=condition_ids(1);
+        same=mask & string(assigned.campaign_condition_id)==existing_condition;
+        next_realization=max(double(assigned.campaign_realization_id(same)))+1;
+    end
+end
+
+e=request.residual_example_deficit;
+r=request.residual_independent_run_deficit;
+c=request.residual_independent_condition_deficit;
+needs_new=c>0 || strlength(existing_condition)==0;
+if needs_new
+    request.planned_action="new_condition";
+    if e>0 || r>0, request.planned_action="combined"; end
+    request.planned_new_condition_count=1;
+    request.realization_count=max(base_realizations,max(1,r));
+    request.realization_start_index=1;
+    request.reason_for_repeat="new physical condition required by condition deficit";
+    expected_conditions=1;
+else
+    request.condition_id=existing_condition;
+    request.planned_new_condition_count=0;
+    request.realization_start_index=next_realization;
+    expected_conditions=0;
+    if r>0
+        request.planned_action="additional_realization";
+        if e>0, request.planned_action="combined"; end
+        request.realization_count=max(r,ceil(e/examples_per_run));
+        request.reason_for_repeat="independent-run deficit requires new realization";
+    else
+        request.planned_action="opportunistic_examples";
+        request.realization_count=max(1,ceil(e/examples_per_run));
+        request.reason_for_repeat="example-only deficit remained after prior packing";
+    end
+end
+request.planned_realization_count=request.realization_count;
+request.expected_example_contribution=min(e, ...
+    request.realization_count*examples_per_run);
+request.expected_independent_run_contribution=min(r,request.realization_count);
+request.expected_independent_condition_contribution=min(c,expected_conditions);
 
 end
 
