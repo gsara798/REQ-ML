@@ -74,7 +74,7 @@
     "realizations_per_condition": 2
   },
   "execution": {
-    "maximum_iterations": 10,
+    "maximum_iterations": 100,
     "planner_seed": 43001,
     "resume_runs": true,
     "continue_on_error": false,
