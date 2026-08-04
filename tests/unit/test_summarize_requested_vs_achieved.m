@@ -88,6 +88,36 @@ verifyEqual(testCase, missing.achieved_cells, "");
 end
 
 
+function testHybridTargetMetricsExcludeOpportunisticCenters(testCase)
+
+examples = make_examples();
+examples.center_selection_role = [ ...
+    "analytic_target";"opportunistic_deficit_fill"; ...
+    "opportunistic_deficit_fill";"analytic_target"; ...
+    "opportunistic_deficit_fill"];
+plan = make_plan();
+
+summary = reqml.coverage.summarizeRequestedVsAchieved(examples,plan);
+row = summary(summary.condition_id=="condition_a",:);
+
+verifyEqual(testCase,row.patch_count,3);
+verifyEqual(testCase,row.requested_cell_patch_count,1);
+verifyTrue(testCase,row.requested_cell_hit);
+verifyEqual(testCase,row.predicted_vs_achieved_purity_error, ...
+    0.55-0.61,AbsTol=1e-12);
+
+examples.coverage_sws_bin(1)=2;
+examples.coverage_frequency_bin(1)=2;
+examples.coverage_purity_bin(1)=2;
+examples.coverage_diffusivity_bin(1)=2;
+summary = reqml.coverage.summarizeRequestedVsAchieved(examples,plan);
+row = summary(summary.condition_id=="condition_a",:);
+verifyFalse(testCase,row.requested_cell_hit, ...
+    "An opportunistic hit must not hide an analytic-target miss.");
+
+end
+
+
 function examples = make_examples()
 
 examples = table();
