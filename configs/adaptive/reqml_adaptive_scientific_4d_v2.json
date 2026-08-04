@@ -12,9 +12,7 @@
     "planner_seed": 42001,
     "realizations_per_condition": 2,
     "geometry_families": [
-      "homogeneous",
-      "bilayer",
-      "circular_inclusion"
+      "bilayer"
     ],
     "purity_cycle_stride": 1,
     "diffusivity_cycle_stride": 2
@@ -71,7 +69,8 @@
   },
   "planning": {
     "maximum_conditions": 12,
-    "realizations_per_condition": 2
+    "realizations_per_condition": 2,
+    "training_geometry_mode": "analytic_bilayer"
   },
   "execution": {
     "maximum_iterations": 100,

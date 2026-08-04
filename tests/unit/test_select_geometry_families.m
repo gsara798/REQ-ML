@@ -96,6 +96,23 @@ verifyEqual(testCase, a, b);
 end
 
 
+function testAnalyticTrainingModeSelectsOnlyBilayer(testCase)
+
+request = make_request(3, [0.9 0.98], 2);
+
+selected = reqml.campaigns.selectGeometryFamilies( ...
+    request, make_history(), ...
+    PlannerSeed=1, ...
+    TrainingGeometryMode="analytic_bilayer");
+
+verifyEqual(testCase, selected.geometry_family, "bilayer");
+verifyEqual(testCase, selected.geometry_candidates, "bilayer");
+verifyEqual(testCase, selected.geometry_selection_basis, ...
+    "analytic_bilayer_training_mode");
+
+end
+
+
 function request = make_request( ...
         purity_bin, purity_range, diffusivity_bin)
 

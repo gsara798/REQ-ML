@@ -34,6 +34,8 @@ arguments
     options.MinimumValidFraction (1,1) double = 1
     options.CenterSelectionSeedOffset (1,1) double = 0
 
+    options.AdaptiveBatchPlanFile (1,1) string = ""
+
     options.StoreReqCurves (1,1) logical = false
     options.UseWindowParfor (1,1) logical = false
     options.UseSampleParfor (1,1) logical = false
@@ -81,6 +83,11 @@ end
 
 new_sample_count = height(processing_samples);
 
+analytic_center_controls = ...
+    resolve_analytic_center_controls( ...
+        processing_samples, ...
+        options.AdaptiveBatchPlanFile);
+
 example_tables = cell(new_sample_count, 1);
 summary_records = repmat( ...
     empty_summary_record(), ...
@@ -104,7 +111,8 @@ if options.UseSampleParfor && new_sample_count > 1
             process_campaign_sample( ...
                 run, ...
                 feat_cfg, ...
-                options);
+                options, ...
+                analytic_center_controls(sample_index));
     end
 else
     for sample_index = 1:new_sample_count
@@ -115,7 +123,8 @@ else
             process_campaign_sample( ...
                 run, ...
                 feat_cfg, ...
-                options);
+                options, ...
+                analytic_center_controls(sample_index));
     end
 end
 
@@ -191,7 +200,8 @@ end
 end
 
 function [examples, summary_record] = ...
-        process_campaign_sample(run, feat_cfg, options)
+        process_campaign_sample( ...
+            run, feat_cfg, options, analytic_center_control)
 
 data = options.Loader( ...
     run.wavefield_sample_path);
@@ -221,9 +231,8 @@ extraction_arguments = {
     "UseWindowParfor", options.UseWindowParfor
     };
 
-if options.UseDirectedCenterSelection
-    validate_directed_center_options(options, run);
-
+if options.UseDirectedCenterSelection || ...
+        analytic_center_control.enabled
     frequency_hz = double(run.frequency_hz);
 
     physical_cfg = struct();
@@ -250,7 +259,21 @@ if options.UseDirectedCenterSelection
     win_size = resolved_feat_cfg.win_size;
     sample_feat_cfg = resolved_feat_cfg;
 
-    dnom = reqml.coverage.computeNominalAngularCoverage( ...
+    if analytic_center_control.enabled
+        validate_analytic_center_control( ...
+            analytic_center_control, ...
+            data, ...
+            win_size, ...
+            run);
+
+        extraction_arguments(end + 1, :) = { ...
+            "CenterIndices", ...
+            analytic_center_control. ...
+                selected_patch_center_indices_xz};
+    else
+        validate_directed_center_options(options, run);
+
+        dnom = reqml.coverage.computeNominalAngularCoverage( ...
         double(run.direction_count), ...
         double(run.solid_angle_sr), ...
         MaximumDirectionCount=128);
@@ -335,6 +358,7 @@ if options.UseDirectedCenterSelection
     extraction_arguments(end + 1, :) = { ...
         "CenterSelectionSeed", ...
         selection_seed};
+    end
 end
 
 extraction_arguments = reshape( ...
@@ -363,6 +387,129 @@ summary_record = make_summary_record( ...
     run, ...
     readiness, ...
     extraction.sample_summary);
+
+end
+
+
+function controls = resolve_analytic_center_controls( ...
+        samples, adaptive_batch_plan_file)
+
+template = struct( ...
+    "enabled", false, ...
+    "condition_id", "", ...
+    "selected_patch_center_indices_xz", [NaN NaN], ...
+    "patch_size_pixels", [NaN NaN], ...
+    "grid_spacing_m", [NaN NaN], ...
+    "predicted_discrete_purity", NaN);
+
+controls = repmat(template, height(samples), 1);
+
+if strlength(adaptive_batch_plan_file) == 0 || isempty(samples)
+    return
+end
+
+if ~isfile(adaptive_batch_plan_file)
+    error("reqml:AdaptiveBatchPlanNotFound", ...
+        "Adaptive batch plan was not found: %s", ...
+        adaptive_batch_plan_file);
+end
+
+plan = jsondecode(fileread(adaptive_batch_plan_file));
+
+if ~isfield(plan, "physical_conditions") || ...
+        isempty(plan.physical_conditions)
+    return
+end
+
+available = string(samples.Properties.VariableNames);
+
+if ~ismember("condition_id", available)
+    has_analytic = arrayfun(@condition_has_analytic_control, ...
+        plan.physical_conditions);
+
+    if any(has_analytic)
+        error("reqml:AnalyticBilayerConditionIdMissing", ...
+            "Campaign samples need condition_id for analytic center control.");
+    end
+
+    return
+end
+
+sample_condition_ids = string(samples.condition_id);
+
+for condition_index = 1:numel(plan.physical_conditions)
+    condition = plan.physical_conditions(condition_index);
+
+    if ~condition_has_analytic_control(condition)
+        continue
+    end
+
+    condition_id = string(condition.condition_id);
+    matches = find(sample_condition_ids == condition_id);
+    control = condition.geometry_control;
+
+    if isempty(matches)
+        error("reqml:AnalyticBilayerConditionSampleNotFound", ...
+            "No executed sample matches analytic condition '%s'.", ...
+            condition_id);
+    end
+
+    for sample_index = reshape(matches, 1, [])
+        controls(sample_index).enabled = true;
+        controls(sample_index).condition_id = condition_id;
+        controls(sample_index).selected_patch_center_indices_xz = ...
+            double(control.selected_patch_center_indices_xz(:))';
+        controls(sample_index).patch_size_pixels = ...
+            double(control.patch_size_pixels(:))';
+        controls(sample_index).grid_spacing_m = ...
+            double(control.grid_spacing_m(:))';
+        controls(sample_index).predicted_discrete_purity = ...
+            double(control.predicted_discrete_purity);
+    end
+end
+
+end
+
+
+function result = condition_has_analytic_control(condition)
+
+result = isfield(condition, "geometry_control") && ...
+    isfield(condition.geometry_control, "geometry_control_mode") && ...
+    string(condition.geometry_control.geometry_control_mode) == ...
+        "analytic_bilayer";
+
+end
+
+
+function validate_analytic_center_control( ...
+        control, data, win_size, run)
+
+if any(control.patch_size_pixels ~= [win_size win_size])
+    error("reqml:AnalyticBilayerPatchSupportMismatch", ...
+        "Run '%s' resolved REQ window [%d,%d], but its analytic " + ...
+        "plan specifies [%d,%d].", ...
+        string(run.run_id), win_size, win_size, ...
+        control.patch_size_pixels(1), ...
+        control.patch_size_pixels(2));
+end
+
+actual_spacing = [double(data.dx_m), double(data.dz_m)];
+
+if any(abs(actual_spacing - control.grid_spacing_m) > ...
+        64 * eps(max(actual_spacing, control.grid_spacing_m)))
+    error("reqml:AnalyticBilayerGridSpacingMismatch", ...
+        "Run '%s' grid spacing differs from its analytic plan.", ...
+        string(run.run_id));
+end
+
+center = control.selected_patch_center_indices_xz;
+
+if any(~isfinite(center)) || any(center < 1) || ...
+        any(center ~= fix(center))
+    error("reqml:InvalidAnalyticBilayerPatchCenter", ...
+        "Run '%s' has an invalid analytic patch center.", ...
+        string(run.run_id));
+end
 
 end
 

@@ -20,6 +20,9 @@ arguments
         "campaign_run_id"
 
     options.PlannerSeed (1,1) double = 1
+
+    options.TrainingGeometryMode (1,1) string = ...
+        "legacy_balanced"
 end
 
 validate_options(options);
@@ -29,13 +32,24 @@ if isempty(requests)
     return
 end
 
-validate_history(assigned_examples, options);
+if options.TrainingGeometryMode == "legacy_balanced"
+    validate_history(assigned_examples, options);
+end
 
 selected = requests;
 
 for request_index = 1:numel(requests)
     request = requests(request_index);
     validate_request(request);
+
+    if options.TrainingGeometryMode == "analytic_bilayer"
+        selected(request_index).geometry_family = "bilayer";
+        selected(request_index).geometry_candidates = "bilayer";
+        selected(request_index).geometry_historical_run_counts = NaN;
+        selected(request_index).geometry_selection_basis = ...
+            "analytic_bilayer_training_mode";
+        continue
+    end
 
     candidates = eligible_families(request);
 
@@ -173,6 +187,12 @@ end
 
 
 function validate_options(options)
+
+if ~ismember(options.TrainingGeometryMode, ...
+        ["legacy_balanced", "analytic_bilayer"])
+    error("reqml:InvalidTrainingGeometryMode", ...
+        "TrainingGeometryMode must be legacy_balanced or analytic_bilayer.");
+end
 
 if ~isfinite(options.PlannerSeed) || ...
         options.PlannerSeed < 0 || ...

@@ -200,6 +200,54 @@ verifyNotEqual(testCase, ...
 end
 
 
+function testMaterializesAuditableAnalyticBilayer(testCase)
+
+requests = make_requests();
+request = requests(2);
+request.condition_id = "analytic_low_frequency";
+request.target_frequency_range_hz = [200 200];
+request.purity_bin = 3;
+request.purity_range = [0.9 0.98];
+
+condition = reqml.campaigns.materializePhysicalConditions( ...
+    request, ...
+    TrainingGeometryMode="analytic_bilayer", ...
+    GridSpacingM=[0.0005 0.0005], ...
+    PatchWindowWavelengths=3, ...
+    CsGuessMPerS=3, ...
+    SelectedPatchCenterIndicesXZ=[51 51], ...
+    InterfaceOrientation="x", ...
+    PlannerSeed=81);
+
+control = condition.geometry_control;
+
+verifyEqual(testCase, condition.geometry.family, "bilayer");
+verifyEqual(testCase, control.geometry_control_mode, ...
+    "analytic_bilayer");
+verifyEqual(testCase, control.requested_purity_lower, 0.9);
+verifyEqual(testCase, control.requested_purity_upper, 0.98);
+verifyGreaterThanOrEqual(testCase, ...
+    control.predicted_discrete_purity, 0.9);
+verifyLessThan(testCase, ...
+    control.predicted_discrete_purity, 0.98);
+verifyEqual(testCase, control.patch_size_pixels, [91 91]);
+verifyEqual(testCase, ...
+    control.selected_patch_center_indices_xz, [51 51]);
+verifyEqual(testCase, condition.geometry.offset_m, ...
+    control.interface_position_m);
+
+if control.dominant_material_side == "negative"
+    local_sws = condition.material.background_cs_m_s;
+else
+    local_sws = condition.material.object_cs_m_s;
+end
+
+verifyGreaterThanOrEqual(testCase, local_sws, 2.0);
+verifyLessThanOrEqual(testCase, local_sws, 2.5);
+
+end
+
+
 function requests = make_requests()
 
 requests = repmat(struct( ...

@@ -56,7 +56,8 @@ feature_config = ...
 
 campaign_config = build_campaign_config( ...
     config, ...
-    resolved);
+    resolved, ...
+    feature_config);
 
 coverage = config.coverage;
 requirements = config.requirements;
@@ -470,6 +471,16 @@ validate_positive_integer( ...
     config.planning.realizations_per_condition, ...
     "planning.realizations_per_condition");
 
+if isfield(config.planning, "training_geometry_mode")
+    mode = string(config.planning.training_geometry_mode);
+
+    if ~isscalar(mode) || ...
+            ~ismember(mode, ["legacy_balanced", "analytic_bilayer"])
+        error("reqml:InvalidAdaptiveCampaignConfig", ...
+            "planning.training_geometry_mode must be legacy_balanced or analytic_bilayer.");
+    end
+end
+
 validate_positive_integer( ...
     config.execution.maximum_iterations, ...
     "execution.maximum_iterations");
@@ -561,7 +572,7 @@ end
 
 
 function campaign = build_campaign_config( ...
-        config, resolved)
+        config, resolved, feature_config)
 
 campaign = struct();
 
@@ -583,6 +594,75 @@ campaign.base_config_mapping = struct( ...
 campaign.output = struct( ...
     "directory", ...
     resolved.simulation_output_directory);
+
+campaign.training_geometry_mode = ...
+    resolve_training_geometry_mode(config);
+
+if campaign.training_geometry_mode == "analytic_bilayer"
+    campaign.analytic_bilayer = ...
+        build_analytic_bilayer_config( ...
+            resolved.base_config_mapping.bilayer, ...
+            feature_config);
+end
+
+end
+
+
+function mode = resolve_training_geometry_mode(config)
+
+if isfield(config.planning, "training_geometry_mode")
+    mode = string(config.planning.training_geometry_mode);
+else
+    mode = "legacy_balanced";
+end
+
+end
+
+
+function analytic = build_analytic_bilayer_config( ...
+        bilayer_base_config_path, feature_config)
+
+if ~isfile(bilayer_base_config_path)
+    error("reqml:AnalyticBilayerBaseConfigNotFound", ...
+        "Analytic bilayer base configuration was not found: %s", ...
+        bilayer_base_config_path);
+end
+
+base = jsondecode(fileread(bilayer_base_config_path));
+
+required_domain_fields = [ ...
+    "Lx_m"
+    "Lz_m"
+    "dx_m"
+    "dz_m"
+    ];
+
+if ~isfield(base, "domain") || ...
+        any(~isfield(base.domain, required_domain_fields))
+    error("reqml:InvalidAnalyticBilayerBaseConfig", ...
+        "Bilayer base configuration must define Lx_m, Lz_m, dx_m, and dz_m.");
+end
+
+domain_size_m = [ ...
+    double(base.domain.Lx_m), ...
+    double(base.domain.Lz_m)];
+grid_spacing_m = [ ...
+    double(base.domain.dx_m), ...
+    double(base.domain.dz_m)];
+domain_size_pixels = ...
+    round(domain_size_m ./ grid_spacing_m) + 1;
+
+analytic = struct();
+analytic.domain_size_m = domain_size_m;
+analytic.grid_spacing_m = grid_spacing_m;
+analytic.patch_window_wavelengths = ...
+    double(feature_config.M);
+analytic.cs_guess_m_s = ...
+    double(feature_config.cs_guess);
+analytic.selected_patch_center_indices_xz = ...
+    round((domain_size_pixels + 1) / 2);
+analytic.interface_orientation = "x";
+analytic.minimum_domain_margin_pixels = 0;
 
 end
 
