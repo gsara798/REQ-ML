@@ -3,10 +3,11 @@ function result = evaluateBilayerPatchPurity( ...
     grid_spacing_m, interface_position_m, options)
 %EVALUATEBILAYERPATCHPURITY Evaluate a discrete bilayer patch mask.
 %
-% Pixel indices are one-based [x,z]. Physical grid coordinates are
-% x=(ix-1)*dx and z=(iz-1)*dz. The swsynth bilayer object occupies the
-% strict positive side n dot [x,z] - interface_position_m > 0; material ID
-% zero occupies the nonpositive side.
+% Pixel indices are one-based [x,z]. When DomainSizeM is supplied, physical
+% coordinates use the simulator's exact linspace(0,L,N) convention. The
+% legacy fallback is x=(ix-1)*dx and z=(iz-1)*dz. The swsynth bilayer object
+% occupies the strict positive side n dot [x,z] - interface_position_m > 0;
+% material ID zero occupies the nonpositive side.
 
 arguments
     patch_size_pixels (1,2) double {mustBeInteger, mustBePositive}
@@ -16,6 +17,7 @@ arguments
 
     options.InterfaceOrientation (1,1) string = "x"
     options.DominantMaterialSide (1,1) string = "negative"
+    options.DomainSizeM (1,2) double = [NaN NaN]
 end
 
 orientation = normalize_orientation(options.InterfaceOrientation);
@@ -33,8 +35,31 @@ x_indices = (patch_center_indices_xz(1) - half_size(1)): ...
 z_indices = (patch_center_indices_xz(2) - half_size(2)): ...
     (patch_center_indices_xz(2) + half_size(2));
 
-x_m = (x_indices - 1) * grid_spacing_m(1);
-z_m = (z_indices - 1) * grid_spacing_m(2);
+if all(isfinite(options.DomainSizeM))
+    domain_size_pixels = round(options.DomainSizeM ./ grid_spacing_m) + 1;
+    reconstructed_domain_m = ...
+        (domain_size_pixels - 1) .* grid_spacing_m;
+
+    if any(abs(reconstructed_domain_m - options.DomainSizeM) > ...
+            64 * eps(max(options.DomainSizeM, grid_spacing_m)))
+        error("reqml:UnsupportedBilayerCoordinateConvention", ...
+            "Domain dimensions must be integer multiples of grid spacing.");
+    end
+
+    if max(x_indices) > domain_size_pixels(1) || ...
+            max(z_indices) > domain_size_pixels(2)
+        error("reqml:InvalidAnalyticBilayerPatchSupport", ...
+            "Patch indices exceed the supplied domain dimensions.");
+    end
+
+    domain_x_m = linspace(0, options.DomainSizeM(1), domain_size_pixels(1));
+    domain_z_m = linspace(0, options.DomainSizeM(2), domain_size_pixels(2));
+    x_m = domain_x_m(x_indices);
+    z_m = domain_z_m(z_indices);
+else
+    x_m = (x_indices - 1) * grid_spacing_m(1);
+    z_m = (z_indices - 1) * grid_spacing_m(2);
+end
 [X, Z] = meshgrid(x_m, z_m);
 
 switch orientation

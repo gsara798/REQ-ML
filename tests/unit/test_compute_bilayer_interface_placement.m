@@ -72,9 +72,25 @@ evaluated = reqml.campaigns.evaluateBilayerPatchPurity( ...
     placement.grid_spacing_m, ...
     placement.interface_position_m, ...
     InterfaceOrientation=placement.interface_orientation, ...
-    DominantMaterialSide=placement.dominant_material_side);
+    DominantMaterialSide=placement.dominant_material_side, ...
+    DomainSizeM=placement.domain_size_m);
 
 verifyEqual(testCase, unique(evaluated.material_patch), uint16(0));
+
+end
+
+
+function testFinalBinUsesPureLimitingCaseWhenWindowIsTooSmall(testCase)
+
+% A 31-pixel axis-aligned window has no sub-unity fraction in [0.98,1).
+% The final coverage bin includes one, so use an out-of-patch interface.
+placement = make_placement([0.98 1], 31, "negative");
+
+verifyEqual(testCase, placement.achieved_discrete_purity, 1);
+verifyTrue(testCase, ...
+    placement.diagnostics.requested_upper_edge_is_inclusive);
+verifyTrue(testCase, ...
+    placement.diagnostics.interface_is_outside_patch_support);
 
 end
 
@@ -156,9 +172,11 @@ placement = make_placement([0.9 0.98], 91, "positive");
 half_win = floor(placement.patch_size_pixels / 2);
 x_indices = (51-half_win(1)):(51+half_win(1));
 z_indices = (51-half_win(2)):(51+half_win(2));
-[X, ~] = meshgrid( ...
-    (x_indices - 1) * placement.grid_spacing_m(1), ...
-    (z_indices - 1) * placement.grid_spacing_m(2));
+domain_x_m = linspace(0, placement.domain_size_m(1), ...
+    placement.domain_size_pixels(1));
+domain_z_m = linspace(0, placement.domain_size_m(2), ...
+    placement.domain_size_pixels(2));
+[X, ~] = meshgrid(domain_x_m(x_indices), domain_z_m(z_indices));
 
 truth_material_patch = uint16( ...
     X - placement.interface_position_m > 0);
@@ -167,6 +185,31 @@ truth_purity = reqml.datasets.computeMaterialPatchPurity( ...
 
 verifyEqual(testCase, ...
     placement.predicted_discrete_purity, truth_purity);
+
+end
+
+
+function testGridAlignedInterfaceUsesSimulatorLinspaceConvention(testCase)
+
+placement = make_placement([0.5 0.7], 31, "positive");
+domain_x_m = linspace(0, placement.domain_size_m(1), ...
+    placement.domain_size_pixels(1));
+
+verifyEqual(testCase, placement.interface_position_m, ...
+    domain_x_m(placement.interface_grid_index));
+
+half_win = floor(placement.patch_size_pixels / 2);
+x_indices = (51-half_win(1)):(51+half_win(1));
+z_indices = (51-half_win(2)):(51+half_win(2));
+domain_z_m = linspace(0, placement.domain_size_m(2), ...
+    placement.domain_size_pixels(2));
+[X, ~] = meshgrid(domain_x_m(x_indices), domain_z_m(z_indices));
+simulation_mask = uint16(X - placement.interface_position_m > 0);
+simulation_purity = reqml.datasets.computeMaterialPatchPurity( ...
+    simulation_mask, true(size(simulation_mask)));
+
+verifyEqual(testCase, placement.predicted_discrete_purity, ...
+    simulation_purity);
 
 end
 
