@@ -515,6 +515,8 @@ previous_build_config = ...
 ignored_fields = [
     "dataset_id"
     "max_samples"
+    "use_sample_parfor"
+    "use_window_parfor"
     ];
 
 for index = 1:numel(ignored_fields)
@@ -938,6 +940,8 @@ config.store_req_curves = ...
     options.StoreReqCurves;
 config.use_window_parfor = ...
     options.UseWindowParfor;
+config.use_sample_parfor = ...
+    options.UseSampleParfor;
 
 config.use_directed_center_selection = ...
     options.UseDirectedCenterSelection;
