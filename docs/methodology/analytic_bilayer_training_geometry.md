@@ -42,6 +42,12 @@ x = (i_x-1)\,d_x,
 z = (i_z-1)\,d_z.
 \]
 
+The simulator constructs the actual floating-point coordinate arrays with
+`linspace(0,L,N)`. Analytic mask evaluation uses that same construction.
+Although `(index-1)*spacing` is algebraically equivalent, its last-bit value
+can differ from `linspace`; at a strict grid-aligned interface, that difference
+can change one material column.
+
 The REQ window is resolved exactly as in dataset extraction:
 
 ```text
@@ -85,9 +91,12 @@ procedure:
 5. Compute purity with the same canonical definition used by dataset
    extraction: the modal material count divided by the number of valid patch
    pixels.
-6. Keep only candidates in the requested half-open interval and select the
-   closest purity to the target, then the closest location to the analytic
-   rounding.
+6. Keep only candidates in the requested interval and select the closest
+   purity to the target, then the closest location to the analytic rounding.
+   Intervals are half-open except for the final coverage interval
+   `[lower,1]`, matching MATLAB `discretize`. If a small window has no
+   sub-unity fraction in that final interval, purity 1 is legal only with the
+   interface outside the patch support.
 
 An exact request `[1,1]` follows a separate rule. The selected interface must
 be at least one grid interval beyond the patch support; placing it on the last
