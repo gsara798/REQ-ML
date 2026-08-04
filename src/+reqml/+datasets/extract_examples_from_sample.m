@@ -384,13 +384,10 @@ for index = 1:n
         truth_cs_max_m_s(index) = max(valid_values);
     end
 
-    valid_materials = double(material_patch(valid_patch));
-
-    if ~isempty(valid_materials)
-        dominant_id = mode(valid_materials);
-        truth_material_id_dominant(index) = dominant_id;
-        truth_material_purity(index) = mean(valid_materials == dominant_id);
-    end
+    [truth_material_purity(index), ...
+        truth_material_id_dominant(index)] = ...
+        reqml.datasets.computeMaterialPatchPurity( ...
+            material_patch, valid_patch);
 end
 
 examples.truth_cs_center_m_s = truth_cs_center_m_s;

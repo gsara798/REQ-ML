@@ -116,13 +116,9 @@ for index = 1:candidate_count
     truth_cs_center_m_s(index) = cs_map(cz, cx);
     truth_valid_fraction(index) = mean(valid_patch, "all");
 
-    valid_materials = double(material_patch(valid_patch));
-
-    if ~isempty(valid_materials)
-        dominant_id = mode(valid_materials);
-        truth_material_purity(index) = ...
-            mean(valid_materials == dominant_id);
-    end
+    truth_material_purity(index) = ...
+        reqml.datasets.computeMaterialPatchPurity( ...
+            material_patch, valid_patch);
 end
 
 candidates = table();
