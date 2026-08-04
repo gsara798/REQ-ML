@@ -18,3 +18,11 @@ The analytic bilayer smoke configuration is consumed by
 `reqml.campaigns.runAnalyticBilayerSmokeTest`; the local geometry equivalence
 configuration records the homogeneous, limiting-bilayer, and large-inclusion
 controls used for separate scientific validation.
+
+The V4 hybrid pilot configuration is
+`adaptive/reqml_adaptive_scientific_4d_v4_analytic_bilayer_deficit_centers_pilot.json`.
+It keeps the exact analytic target and enables truth-evaluated, deficit-aware
+centers through `center_selection.mode`. Its outputs are isolated from V2 and
+V3. See `docs/methodology/deficit_aware_bilayer_centers.md` for the selection
+contract and `docs/methodology/analytic_bilayer_v4_deficit_center_pilot.md`
+for the ten-iteration result.

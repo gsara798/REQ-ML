@@ -294,6 +294,47 @@ FUNCTION run_adaptive_reqml_campaign(planner_config):
 
 ## Deficit-to-simulation mapping
 
+### Analytic bilayer with deficit-aware centers
+
+The controlled training mode specializes dataset extension as follows. The
+coverage snapshot is frozen before processing the new runs and is not updated
+inside serial or parallel workers.
+
+```text
+pre_iteration_state = complete_coverage_grid(previous_coverage_report)
+
+FOR each new analytic bilayer run:
+    W = resolve_exact_REQ_window(run.frequency, cs_guess, grid_spacing, M)
+    target = analytic_center_from_executed_batch_plan(run.condition_id)
+    candidates = [target; truth_grid_centers(step = 2)]
+
+    FOR each candidate:
+        support = exact_odd_window_support(candidate, W)
+        reject if support or valid-mask constraints fail
+        purity = compute_material_purity(actual_discrete_truth_mask(support))
+        local_sws = truth_sws_at_center(candidate)
+        achieved_cell = bin(local_sws, frequency, purity, Dnom)
+
+    selected = [target]
+    WHILE selected count < 12:
+        eligible = candidates whose achieved_cell was deficient in
+                   pre_iteration_state
+        enforce at most 2 useful centers per cell per run
+        enforce center separation >= 0.75 W
+        choose by run deficit, condition deficit, example deficit,
+                  deficit score, never-observed status, distance,
+                  deterministic seeded tie-break
+        append choice, or stop if no candidate remains
+
+    extract exactly selected centers
+    persist role, rank, achieved cell, pre-iteration deficits,
+            purity, coordinates, distances, run_id, and condition_id
+```
+
+The target is never replaced. Multiple selected patches remain examples from
+one simulation run and one physical condition; coverage independence is still
+computed with unique `run_id` and `condition_id` values.
+
 ```text
 IF low-purity bins are deficient:
     prioritize bilayers crossing the usable ROI
