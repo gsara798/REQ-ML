@@ -407,3 +407,12 @@ These risks are controlled by:
 - retaining nominal angular aperture, direction count, effective angular bins, and in-plane fraction;
 - requiring independent runs and geometry seeds per bin;
 - using an iterative generate–measure–correct loop.
+## Geometry policy
+
+Adaptive configs may set
+`planning.training_geometry_mode = "analytic_bilayer"`. In this mode every
+requested coverage cell receives one axis-aligned bilayer condition with a
+grid-corrected interface and an exact planned patch center. See
+`analytic_bilayer_training_geometry.md` for the equations, discrete mask
+convention, feasibility rules, and audit metadata. Omitting the option keeps
+the legacy geometry-balancing behavior.
