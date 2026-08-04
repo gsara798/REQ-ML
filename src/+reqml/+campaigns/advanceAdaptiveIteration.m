@@ -43,6 +43,7 @@ arguments
     options.MinimumCenterDistanceFraction (1,1) double = 0.5
     options.MinimumValidFraction (1,1) double = 1
     options.CenterSelectionSeedOffset (1,1) double = 0
+    options.UseSampleParfor (1,1) logical = false
 
     options.ParentCoverageReportHash (1,1) string = ""
 

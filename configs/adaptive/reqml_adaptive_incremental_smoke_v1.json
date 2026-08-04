@@ -1,9 +1,9 @@
 {
   "schema_name": "reqml_adaptive_campaign_config",
   "schema_version": "1.1",
-  "campaign_id": "reqml_adaptive_scientific_4d_v2",
+  "campaign_id": "reqml_adaptive_incremental_smoke_v1",
   "paths": {
-    "output_root": "${REPOSITORY_ROOT}/outputs/adaptive_scientific_4d/reqml_adaptive_scientific_4d_v2",
+    "output_root": "${REPOSITORY_ROOT}/outputs/adaptive_incremental_smoke/reqml_adaptive_incremental_smoke_v1",
     "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework"
   },
   "bootstrap": {
@@ -21,7 +21,7 @@
   },
   "simulation": {
     "backend": "swsynth",
-    "output_directory": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns/scientific_4d/reqml_adaptive_scientific_4d_v2",
+    "output_directory": "${SIMULATION_FRAMEWORK_ROOT}/outputs/campaigns/adaptive_incremental_smoke/reqml_adaptive_incremental_smoke_v1",
     "base_config_mapping": {
       "homogeneous": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
       "bilayer": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/bilayer_base.json",
@@ -74,7 +74,7 @@
     "realizations_per_condition": 2
   },
   "execution": {
-    "maximum_iterations": 100,
+    "maximum_iterations": 2,
     "planner_seed": 43001,
     "resume_runs": true,
     "continue_on_error": false,

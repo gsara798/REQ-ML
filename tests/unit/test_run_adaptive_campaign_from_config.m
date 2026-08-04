@@ -139,6 +139,7 @@ arguments
     options.MinimumCenterDistanceFraction (1,1) double = 0.5
     options.MinimumValidFraction (1,1) double = 1
     options.CenterSelectionSeedOffset (1,1) double = 0
+    options.UseSampleParfor (1,1) logical = false
 
     options.Resume
     options.ContinueOnError
@@ -160,6 +161,9 @@ result.diffusivity_edges = ...
 
 result.resume_existing_loop = ...
     options.ResumeExistingLoop;
+
+result.use_sample_parfor = ...
+    options.UseSampleParfor;
 
 result.campaign_config = ...
     campaign_config;
