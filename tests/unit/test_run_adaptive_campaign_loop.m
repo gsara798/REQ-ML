@@ -384,11 +384,16 @@ arguments
     options.MinimumCenterDistanceFraction (1,1) double = 0.5
     options.MinimumValidFraction (1,1) double = 1
     options.CenterSelectionSeedOffset (1,1) double = 0
+    options.CenterSelectionMode (1,1) string = "default"
+    options.MaximumCentersPerRun (1,1) double = 12
+    options.MaximumCentersPerCellPerRun (1,1) double = 2
+    options.MinimumCenterSeparationFraction (1,1) double = 0.75
     options.UseSampleParfor (1,1) logical = false
 
     options.ParentCoverageReportHash = ""
     options.ExecutedBatchPlanFile = ""
     options.PreviousDatasetDirectory (1,1) string = ""
+    options.PreviousCoverageReportFile (1,1) string = ""
 end
 
 iteration_directory = ...

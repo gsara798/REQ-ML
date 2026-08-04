@@ -41,6 +41,47 @@ verifyEqual(testCase, string(get_basename( ...
 end
 
 
+function testV4DeficitCenterPilotConfigUsesIsolatedPaths(testCase)
+
+campaign_id = ...
+    "reqml_adaptive_scientific_4d_v4_analytic_bilayer_deficit_centers_pilot";
+config_file = fullfile(testCase.TestData.repository_root, "configs", ...
+    "adaptive", campaign_id + ".json");
+config_text = string(fileread(config_file));
+config = jsondecode(config_text);
+
+verifyEqual(testCase, string(config.campaign_id), campaign_id);
+verifyEqual(testCase, double(config.execution.maximum_iterations), 10);
+verifyFalse(testCase, logical(config.execution.resume_existing_loop));
+verifyTrue(testCase, logical(config.execution.resume_runs));
+verifyTrue(testCase, logical(config.execution.use_sample_parfor));
+verifyEqual(testCase, double(config.planning.maximum_conditions), 12);
+verifyEqual(testCase, double(config.planning.realizations_per_condition), 2);
+verifyEqual(testCase, string(config.planning.training_geometry_mode), ...
+    "analytic_bilayer");
+verifyEqual(testCase, string(config.bootstrap.geometry_families), "bilayer");
+verifyEqual(testCase, string(config.center_selection.mode), ...
+    "analytic_target_plus_deficit_aware_centers");
+verifyEqual(testCase, double(config.center_selection.candidate_step_pixels), 2);
+verifyEqual(testCase, ...
+    double(config.center_selection.maximum_centers_per_run), 12);
+verifyEqual(testCase, ...
+    double(config.center_selection.maximum_centers_per_cell_per_run), 2);
+verifyEqual(testCase, ...
+    double(config.center_selection.minimum_center_separation_fraction), 0.75);
+verifyEqual(testCase, string(config.paths.simulation_framework_root), ...
+    "/Users/sara/local/shear-wave-simulation-framework");
+verifyFalse(testCase, contains(config_text, ...
+    "reqml_adaptive_scientific_4d_v2"));
+verifyFalse(testCase, contains(config_text, ...
+    "reqml_adaptive_scientific_4d_v3_analytic_bilayer_pilot"));
+verifyEqual(testCase, string(get_basename(config.paths.output_root)), campaign_id);
+verifyEqual(testCase, string(get_basename( ...
+    config.simulation.output_directory)), campaign_id);
+
+end
+
+
 function testRejectsExistingReqmlOutput(testCase)
 
 [root, config_file, config] = make_fixture_config(testCase);

@@ -66,6 +66,8 @@ execution = config.execution;
 
 directed_center_selection = ...
     resolve_directed_center_selection(config);
+validate_center_selection_geometry_mode( ...
+    directed_center_selection, planning);
 
 [previous_campaign_csv, ...
     initial_batch_directory, ...
@@ -126,6 +128,13 @@ result = feval( ...
         directed_center_selection.minimum_valid_fraction), ...
     CenterSelectionSeedOffset=double( ...
         directed_center_selection.seed_offset), ...
+    CenterSelectionMode=string(directed_center_selection.mode), ...
+    MaximumCentersPerRun=double( ...
+        directed_center_selection.maximum_centers_per_run), ...
+    MaximumCentersPerCellPerRun=double( ...
+        directed_center_selection.maximum_centers_per_cell_per_run), ...
+    MinimumCenterSeparationFraction=double( ...
+        directed_center_selection.minimum_center_separation_fraction), ...
     UseSampleParfor=get_logical_field( ...
         execution, ...
         "use_sample_parfor", ...
@@ -231,6 +240,24 @@ selection.maximum_centers_per_cell = 4;
 selection.minimum_center_distance_fraction = 0.5;
 selection.minimum_valid_fraction = 1;
 selection.seed_offset = 0;
+selection.mode = "default";
+selection.maximum_centers_per_run = 12;
+selection.maximum_centers_per_cell_per_run = 2;
+selection.minimum_center_separation_fraction = 0.75;
+
+if isfield(config, "center_selection")
+    requested = config.center_selection;
+    names = string(fieldnames(selection));
+    for index = 1:numel(names)
+        name = names(index);
+        if isfield(requested, name)
+            selection.(name) = requested.(name);
+        end
+    end
+    selection.enabled = selection.mode == "legacy_directed";
+    validate_center_selection(selection);
+    return
+end
 
 if ~isfield(config, "directed_center_selection")
     return
@@ -245,6 +272,44 @@ for index = 1:numel(names)
     if isfield(requested, name)
         selection.(name) = requested.(name);
     end
+end
+
+if selection.enabled
+    selection.mode = "legacy_directed";
+end
+
+end
+
+
+function validate_center_selection(selection)
+allowed = ["default","legacy_directed", ...
+    "analytic_exact_center", ...
+    "analytic_target_plus_deficit_aware_centers"];
+if ~ismember(string(selection.mode),allowed)
+    error("reqml:InvalidCenterSelectionMode", ...
+        "Unsupported center_selection.mode '%s'.",string(selection.mode));
+end
+if selection.maximum_centers_per_run < 1 || ...
+        selection.maximum_centers_per_cell_per_run < 1 || ...
+        selection.minimum_center_separation_fraction < 0
+    error("reqml:InvalidCenterSelectionConfig", ...
+        "Hybrid center-selection quotas and separation must be valid.");
+end
+
+end
+
+
+function validate_center_selection_geometry_mode(selection, planning)
+
+if string(selection.mode) ~= ...
+        "analytic_target_plus_deficit_aware_centers"
+    return
+end
+
+if ~isfield(planning,"training_geometry_mode") || ...
+        string(planning.training_geometry_mode) ~= "analytic_bilayer"
+    error("reqml:HybridCentersRequireAnalyticBilayer", ...
+        "Hybrid deficit-aware centers require planning.training_geometry_mode='analytic_bilayer'.");
 end
 
 end
