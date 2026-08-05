@@ -90,8 +90,11 @@ deficits.sws_bin = 1;
 deficits.frequency_bin = 1;
 deficits.purity_bin = 3;
 deficits.diffusivity_bin = 2;
+deficits.discretization_bin = 1;
 deficits.purity_label = "[0.9,0.98)";
 deficits.diffusivity_label = "[0.01,0.05)";
+deficits.discretization_label = ...
+    "dx=0.0005,dz=0.0005";
 deficits.example_deficit = 4;
 deficits.independent_run_deficit = 1;
 deficits.independent_condition_deficit = 1;
@@ -104,11 +107,15 @@ report.config = struct( ...
     "purity_edges", [0.5 0.7 0.9 0.98 1.0], ...
     "diffusivity_edges", [0 0.01 0.05 0.2 0.5 1.0], ...
     "sws_edges", [1.5 2.0 2.5 3.0 3.5 4.0], ...
-    "frequency_edges", [199 250 350 450 550 601]);
+    "frequency_edges", [199 250 350 450 550 601], ...
+    "discretization_pairs_m", [0.0005 0.0005]);
 
 assigned = table();
+assigned.coverage_sws_bin = zeros(0,1);
+assigned.coverage_frequency_bin = zeros(0,1);
 assigned.coverage_purity_bin = zeros(0,1);
 assigned.coverage_diffusivity_bin = zeros(0,1);
+assigned.coverage_discretization_bin = zeros(0,1);
 assigned.coverage_valid = false(0,1);
 assigned.campaign_geometry_family = strings(0,1);
 assigned.campaign_run_id = strings(0,1);

@@ -367,6 +367,8 @@ arguments
     options.DiffusivityEdges
     options.SwsEdges
     options.FrequencyEdges
+    options.DiscretizationPairsM (:,2) double = ...
+        [0.0005 0.0005]
 
     options.MinimumExamples = 500
     options.MinimumIndependentRuns = 5

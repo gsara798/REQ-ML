@@ -34,15 +34,15 @@ verifyEqual(testCase, ...
 verifyEqual(testCase, ...
     deficits.cell_key, ...
     [ ...
-        "s01_f02_p01_d01"
-        "s01_f01_p01_d01"
+        "s01_f02_p01_d01_g02"
+        "s01_f01_p01_d01_g01"
     ]);
 
 first = deficits.cell_key == ...
-    "s01_f01_p01_d01";
+    "s01_f01_p01_d01_g01";
 
 second = deficits.cell_key == ...
-    "s01_f02_p01_d01";
+    "s01_f02_p01_d01_g02";
 
 verifyEqual(testCase, ...
     deficits.example_deficit(first), ...
@@ -99,11 +99,12 @@ summary.sws_bin = [1; 1; 2];
 summary.frequency_bin = [1; 2; 1];
 summary.purity_bin = [1; 1; 1];
 summary.diffusivity_bin = [1; 1; 1];
+summary.discretization_bin = [1; 2; 3];
 
 summary.cell_key = [
-    "s01_f01_p01_d01"
-    "s01_f02_p01_d01"
-    "s02_f01_p01_d01"
+    "s01_f01_p01_d01_g01"
+    "s01_f02_p01_d01_g02"
+    "s02_f01_p01_d01_g03"
     ];
 
 summary.sws_label = [
@@ -123,6 +124,12 @@ summary.purity_label = ...
 
 summary.diffusivity_label = ...
     repmat("[0,0.01)", 3, 1);
+
+summary.discretization_label = [
+    "dx=0.00025,dz=0.00025"
+    "dx=0.0004,dz=0.0004"
+    "dx=0.0005,dz=0.0005"
+    ];
 
 summary.example_count = [3; 0; 4];
 summary.independent_run_count = [2; 0; 2];

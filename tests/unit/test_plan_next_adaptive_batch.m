@@ -44,6 +44,16 @@ verifyEqual(testCase, result.request_count, 2);
 verifyEqual(testCase, result.condition_count, 2);
 verifyEqual(testCase, result.run_count, 4);
 
+verifyEqual(testCase, ...
+    result.physical_conditions(1).discretization.dx_m, ...
+    0.25e-3, ...
+    AbsTol=1e-15);
+
+verifyEqual(testCase, ...
+    result.physical_conditions(2).discretization.dx_m, ...
+    0.50e-3, ...
+    AbsTol=1e-15);
+
 verifyTrue(testCase, isfile(result.paths.plan));
 
 verifyTrue(testCase, ...
@@ -221,12 +231,18 @@ deficits.frequency_bin = [2; 3];
 
 deficits.purity_bin = [1; 3];
 deficits.diffusivity_bin = [1; 3];
+deficits.discretization_bin = [1; 3];
 
 deficits.purity_label = ...
     ["[0.5,0.7)"; "[0.9,1]"];
 
 deficits.diffusivity_label = ...
     ["[0,0.4)"; "[0.7,1]"];
+
+deficits.discretization_label = [
+    "dx=0.00025,dz=0.00025"
+    "dx=0.0005,dz=0.0005"
+    ];
 
 deficits.example_deficit = [400; 200];
 deficits.independent_run_deficit = [4; 2];
@@ -254,10 +270,19 @@ report.config.sws_edges = ...
 report.config.frequency_edges = ...
     [199 350 450 601];
 
+report.config.discretization_pairs_m = [
+    0.25e-3 0.25e-3
+    0.40e-3 0.40e-3
+    0.50e-3 0.50e-3
+    ];
+
 assigned = table();
 
+assigned.coverage_sws_bin = [2; 2; 3];
+assigned.coverage_frequency_bin = [2; 2; 3];
 assigned.coverage_purity_bin = [1; 1; 3];
 assigned.coverage_diffusivity_bin = [1; 1; 3];
+assigned.coverage_discretization_bin = [1; 1; 3];
 assigned.coverage_valid = true(3, 1);
 
 assigned.campaign_geometry_family = [

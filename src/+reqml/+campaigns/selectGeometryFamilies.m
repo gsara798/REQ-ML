@@ -4,7 +4,7 @@ function selected = selectGeometryFamilies( ...
 %
 % Geometry is not a stopping axis. This selector only avoids repeatedly
 % generating the same family when multiple families can address the same
-% purity-diffusivity deficit.
+% complete SWS-frequency-purity-angularity-discretization deficit.
 %
 % Historical support is measured using independent simulation runs rather
 % than patch counts.
@@ -98,10 +98,16 @@ if isempty(examples)
 end
 
 mask = ...
+    double(examples.coverage_sws_bin) == ...
+        double(request.sws_bin) & ...
+    double(examples.coverage_frequency_bin) == ...
+        double(request.frequency_bin) & ...
     double(examples.coverage_purity_bin) == ...
         double(request.purity_bin) & ...
     double(examples.coverage_diffusivity_bin) == ...
         double(request.diffusivity_bin) & ...
+    double(examples.coverage_discretization_bin) == ...
+        double(request.discretization_bin) & ...
     logical(examples.coverage_valid) & ...
     string(examples.(options.GeometryVariable)) == family;
 
@@ -145,8 +151,11 @@ end
 function validate_history(examples, options)
 
 required = [
+    "coverage_sws_bin"
+    "coverage_frequency_bin"
     "coverage_purity_bin"
     "coverage_diffusivity_bin"
+    "coverage_discretization_bin"
     "coverage_valid"
     options.GeometryVariable
     options.RunVariable
@@ -168,9 +177,12 @@ end
 function validate_request(request)
 
 required = [
+    "sws_bin"
+    "frequency_bin"
     "purity_bin"
     "purity_range"
     "diffusivity_bin"
+    "discretization_bin"
     ];
 
 missing = setdiff( ...

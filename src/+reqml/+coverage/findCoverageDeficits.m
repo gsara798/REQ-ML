@@ -1,5 +1,5 @@
 function deficits = findCoverageDeficits(summary, options)
-%FINDCOVERAGEDEFICITS Identify incomplete 4-D coverage cells.
+%FINDCOVERAGEDEFICITS Identify incomplete 5-D coverage cells.
 %
 % A cell is defined by:
 %
@@ -7,6 +7,7 @@ function deficits = findCoverageDeficits(summary, options)
 %   frequency bin
 %   purity bin
 %   diffusivity / nominal-angular-coverage bin
+%   spatial-discretization bin
 %
 % Since SWS and frequency are explicit cell dimensions, internal SWS-bin
 % and frequency-bin diversity requirements no longer apply.
@@ -47,11 +48,13 @@ required = [
     "frequency_bin"
     "purity_bin"
     "diffusivity_bin"
+    "discretization_bin"
     "cell_key"
     "sws_label"
     "frequency_label"
     "purity_label"
     "diffusivity_label"
+    "discretization_label"
     "example_count"
     "independent_run_count"
     ];
@@ -162,9 +165,11 @@ if ~isempty(deficits)
             "frequency_bin"
             "purity_bin"
             "diffusivity_bin"
+            "discretization_bin"
         ], ...
         [ ...
             "descend"
+            "ascend"
             "ascend"
             "ascend"
             "ascend"

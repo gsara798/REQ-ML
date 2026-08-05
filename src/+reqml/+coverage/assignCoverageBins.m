@@ -7,6 +7,7 @@ function assigned = assignCoverageBins(examples, options)
 %   measured field diffusivity
 %   local true SWS
 %   excitation frequency
+%   spatial discretization level
 %
 % Usage:
 %
@@ -35,6 +36,14 @@ arguments
     options.FrequencyVariable (1,1) string = ...
         "campaign_frequency_hz"
 
+    options.DxVariable (1,1) string = "GRID_dx_m"
+    options.DzVariable (1,1) string = "GRID_dz_m"
+
+    options.DiscretizationPairsM (:,2) double = ...
+        [0.0005 0.0005]
+
+    options.DiscretizationTolerance (1,1) double = 1e-12
+
     options.PurityEdges (1,:) double
     options.DiffusivityEdges (1,:) double
     options.SwsEdges (1,:) double
@@ -45,11 +54,14 @@ validate_edges(options.PurityEdges, "PurityEdges");
 validate_edges(options.DiffusivityEdges, "DiffusivityEdges");
 validate_edges(options.SwsEdges, "SwsEdges");
 validate_edges(options.FrequencyEdges, "FrequencyEdges");
+validate_discretization_options(options);
 
 required_variables = [
     options.PurityVariable
     options.SwsVariable
     options.FrequencyVariable
+    options.DxVariable
+    options.DzVariable
     ];
 
 field_mode = lower(string(options.FieldCoverageMode));
@@ -110,6 +122,13 @@ assigned.coverage_frequency_bin = assign_numeric_bin( ...
     examples.(options.FrequencyVariable), ...
     options.FrequencyEdges);
 
+assigned.coverage_discretization_bin = ...
+    assign_discretization_bin( ...
+        examples.(options.DxVariable), ...
+        examples.(options.DzVariable), ...
+        options.DiscretizationPairsM, ...
+        options.DiscretizationTolerance);
+
 assigned.coverage_purity_label = make_labels( ...
     assigned.coverage_purity_bin, ...
     options.PurityEdges);
@@ -127,11 +146,17 @@ assigned.coverage_frequency_label = make_labels( ...
     assigned.coverage_frequency_bin, ...
     options.FrequencyEdges);
 
+assigned.coverage_discretization_label = ...
+    make_discretization_labels( ...
+        assigned.coverage_discretization_bin, ...
+        options.DiscretizationPairsM);
+
 assigned.coverage_valid = ...
     assigned.coverage_purity_bin > 0 & ...
     assigned.coverage_diffusivity_bin > 0 & ...
     assigned.coverage_sws_bin > 0 & ...
-    assigned.coverage_frequency_bin > 0;
+    assigned.coverage_frequency_bin > 0 & ...
+    assigned.coverage_discretization_bin > 0;
 
 assigned.coverage_cell_key = ...
     make_coverage_cell_keys( ...
@@ -139,6 +164,7 @@ assigned.coverage_cell_key = ...
         assigned.coverage_frequency_bin, ...
         assigned.coverage_purity_bin, ...
         assigned.coverage_diffusivity_bin, ...
+        assigned.coverage_discretization_bin, ...
         assigned.coverage_valid);
 
 end
@@ -146,16 +172,85 @@ end
 
 function keys = make_coverage_cell_keys( ...
         sws_bin, frequency_bin, purity_bin, ...
-        diffusivity_bin, valid)
+        diffusivity_bin, discretization_bin, valid)
 
 keys = repmat("out_of_range", numel(valid), 1);
 
 keys(valid) = compose( ...
-    "s%02d_f%02d_p%02d_d%02d", ...
+    "s%02d_f%02d_p%02d_d%02d_g%02d", ...
     sws_bin(valid), ...
     frequency_bin(valid), ...
     purity_bin(valid), ...
-    diffusivity_bin(valid));
+    diffusivity_bin(valid), ...
+    discretization_bin(valid));
+
+end
+
+
+function bin = assign_discretization_bin( ...
+        dx_values, dz_values, pairs_m, tolerance)
+
+dx_values = double(dx_values);
+dz_values = double(dz_values);
+
+bin = zeros(numel(dx_values), 1);
+
+for level = 1:size(pairs_m, 1)
+    dx_match = abs(dx_values - pairs_m(level, 1)) <= tolerance;
+    dz_match = abs(dz_values - pairs_m(level, 2)) <= tolerance;
+
+    bin(dx_match & dz_match) = level;
+end
+
+end
+
+
+function labels = make_discretization_labels(bin, pairs_m)
+
+labels = strings(numel(bin), 1);
+
+for index = 1:numel(bin)
+    level = bin(index);
+
+    if level <= 0
+        labels(index) = "out_of_range";
+        continue
+    end
+
+    labels(index) = sprintf( ...
+        "dx=%g,dz=%g", ...
+        pairs_m(level, 1), ...
+        pairs_m(level, 2));
+end
+
+end
+
+
+function validate_discretization_options(options)
+
+pairs_m = double(options.DiscretizationPairsM);
+
+if isempty(pairs_m) || ...
+        size(pairs_m, 2) ~= 2 || ...
+        any(~isfinite(pairs_m), "all") || ...
+        any(pairs_m <= 0, "all")
+
+    error("reqml:InvalidDiscretizationCoverage", ...
+        "DiscretizationPairsM must be a finite positive N-by-2 matrix.");
+end
+
+if size(unique(pairs_m, "rows"), 1) ~= size(pairs_m, 1)
+    error("reqml:InvalidDiscretizationCoverage", ...
+        "DiscretizationPairsM must not contain duplicate pairs.");
+end
+
+if ~isscalar(options.DiscretizationTolerance) || ...
+        ~isfinite(options.DiscretizationTolerance) || ...
+        options.DiscretizationTolerance < 0
+
+    error("reqml:InvalidDiscretizationCoverage", ...
+        "DiscretizationTolerance must be a finite nonnegative scalar.");
+end
 
 end
 

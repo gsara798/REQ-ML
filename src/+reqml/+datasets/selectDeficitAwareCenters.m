@@ -18,6 +18,15 @@ arguments
     options.FrequencyEdges (1,:) double
     options.FrequencyHz (1,1) double {mustBeFinite}
     options.Dnom (1,1) double {mustBeFinite}
+
+    options.GridSpacingM (1,2) double = ...
+        [0.0005 0.0005]
+
+    options.DiscretizationPairsM (:,2) double = ...
+        [0.0005 0.0005]
+
+    options.DiscretizationTolerance (1,1) double = 1e-12
+
     options.CandidateStepPixels (1,1) double = 2
     options.MaximumCentersPerRun (1,1) double = 12
     options.MaximumCentersPerCellPerRun (1,1) double = 2
@@ -129,6 +138,8 @@ for index = 1:size(candidate_xy, 1)
     candidate.achieved_frequency_bin = bins.frequency_bin;
     candidate.achieved_purity_bin = bins.purity_bin;
     candidate.achieved_dnom_bin = bins.dnom_bin;
+    candidate.achieved_discretization_bin = ...
+        bins.discretization_bin;
     candidate.frequency_hz = options.FrequencyHz;
     candidate.nominal_angular_coverage = options.Dnom;
     candidate.coverage_valid = bins.valid;
@@ -286,20 +297,68 @@ end
 
 
 function bins = resolve_bins(sws, purity, options)
-s = double(discretize(sws, options.SwsEdges));
-f = double(discretize(options.FrequencyHz, options.FrequencyEdges));
-p = double(discretize(purity, options.PurityEdges));
-d = double(discretize(options.Dnom, options.DiffusivityEdges));
-bins.valid = all(isfinite([s f p d])) && all([s f p d] > 0);
+
+s = double(discretize( ...
+    sws, ...
+    options.SwsEdges));
+
+f = double(discretize( ...
+    options.FrequencyHz, ...
+    options.FrequencyEdges));
+
+p = double(discretize( ...
+    purity, ...
+    options.PurityEdges));
+
+d = double(discretize( ...
+    options.Dnom, ...
+    options.DiffusivityEdges));
+
+g = resolve_discretization_bin( ...
+    options.GridSpacingM, ...
+    options.DiscretizationPairsM, ...
+    options.DiscretizationTolerance);
+
+bins.valid = ...
+    all(isfinite([s f p d g])) && ...
+    all([s f p d g] > 0);
+
 bins.sws_bin = s;
 bins.frequency_bin = f;
 bins.purity_bin = p;
 bins.dnom_bin = d;
+bins.discretization_bin = g;
+
 if bins.valid
-    bins.cell_key = compose("s%02d_f%02d_p%02d_d%02d", s, f, p, d);
+    bins.cell_key = compose( ...
+        "s%02d_f%02d_p%02d_d%02d_g%02d", ...
+        s, f, p, d, g);
 else
     bins.cell_key = "out_of_range";
 end
+
+end
+
+
+function bin = resolve_discretization_bin( ...
+        spacing_m, pairs_m, tolerance)
+
+spacing_m = double(spacing_m(:))';
+pairs_m = double(pairs_m);
+
+distance = max( ...
+    abs(pairs_m - spacing_m), ...
+    [], ...
+    2);
+
+matches = find(distance <= tolerance);
+
+if numel(matches) == 1
+    bin = double(matches);
+else
+    bin = NaN;
+end
+
 end
 
 function quota = useful_cell_quota(state, maximum, realizations_per_condition)
@@ -383,7 +442,9 @@ candidate = struct("cx",NaN,"cz",NaN,"center_x_m",NaN, ...
     "achieved_local_sws_m_s",NaN,"achieved_purity",NaN, ...
     "achieved_cell_key","","achieved_sws_bin",NaN, ...
     "achieved_frequency_bin",NaN,"achieved_purity_bin",NaN, ...
-    "achieved_dnom_bin",NaN,"frequency_hz",NaN, ...
+    "achieved_dnom_bin",NaN, ...
+    "achieved_discretization_bin",NaN, ...
+    "frequency_hz",NaN, ...
     "nominal_angular_coverage",NaN, ...
     "coverage_valid",false,"is_analytic_target",false, ...
     "tie_breaker",uint64(0));

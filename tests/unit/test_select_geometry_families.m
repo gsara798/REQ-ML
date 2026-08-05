@@ -42,6 +42,37 @@ verifyEqual(testCase, ...
 end
 
 
+function testIgnoresHistoryFromOtherFiveDimensionalCells(testCase)
+
+request = make_request(1, [0.5 0.7], 1);
+
+examples = make_history();
+
+extra = examples(1, :);
+extra.coverage_sws_bin = 2;
+extra.coverage_frequency_bin = 2;
+extra.coverage_discretization_bin = 3;
+extra.campaign_geometry_family = "circular_inclusion";
+extra.campaign_run_id = "other_cell_run";
+
+examples = [examples; extra];
+
+selected = reqml.campaigns.selectGeometryFamilies( ...
+    request, ...
+    examples, ...
+    PlannerSeed=1);
+
+verifyEqual(testCase, ...
+    selected.geometry_historical_run_counts, ...
+    [2; 0]);
+
+verifyEqual(testCase, ...
+    selected.geometry_family, ...
+    "circular_inclusion");
+
+end
+
+
 function testAllowsHomogeneousOnlyForPurePatchRequests(testCase)
 
 request = make_request(3, [0.98 1.0], 3);
@@ -76,6 +107,36 @@ selected = reqml.campaigns.selectGeometryFamilies( ...
 verifyFalse(testCase, ...
     ismember("homogeneous", ...
         selected.geometry_candidates));
+
+end
+
+
+function testCountsRunsOnlyWithinMatchingFiveDimensionalCell(testCase)
+
+request = make_request(1, [0.5 0.7], 1);
+
+examples = make_history();
+
+matching = examples(1, :);
+matching.campaign_geometry_family = ...
+    "circular_inclusion";
+matching.campaign_run_id = ...
+    "matching_inclusion_run";
+
+examples = [examples; matching];
+
+selected = reqml.campaigns.selectGeometryFamilies( ...
+    request, ...
+    examples, ...
+    PlannerSeed=1);
+
+verifyEqual(testCase, ...
+    selected.geometry_historical_run_counts, ...
+    [2; 1]);
+
+verifyEqual(testCase, ...
+    selected.geometry_family, ...
+    "circular_inclusion");
 
 end
 
@@ -119,10 +180,15 @@ function request = make_request( ...
 request = struct();
 
 request.condition_id = "request_001";
+request.sws_bin = 1;
+request.frequency_bin = 1;
 request.purity_bin = purity_bin;
 request.purity_range = purity_range;
 request.diffusivity_bin = diffusivity_bin;
 request.diffusivity_range = [0 0.4];
+request.discretization_bin = 1;
+request.target_grid_spacing_m = ...
+    [0.25e-3 0.25e-3];
 
 request.geometry_family = "";
 request.field_regime = "directional";
@@ -140,8 +206,11 @@ function examples = make_history()
 
 examples = table();
 
+examples.coverage_sws_bin = [1; 1; 1];
+examples.coverage_frequency_bin = [1; 1; 1];
 examples.coverage_purity_bin = [1; 1; 3];
 examples.coverage_diffusivity_bin = [1; 1; 3];
+examples.coverage_discretization_bin = [1; 1; 1];
 examples.coverage_valid = true(3, 1);
 
 examples.campaign_geometry_family = [
