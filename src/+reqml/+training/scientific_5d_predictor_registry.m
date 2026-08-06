@@ -88,8 +88,6 @@ base_predictors = [
 
 composition_prediction_predictors = [
     "predicted_patch_purity"
-    "predicted_mixed_probability"
-    "predicted_strong_mixed_probability"
     ];
 
 registry = struct();
