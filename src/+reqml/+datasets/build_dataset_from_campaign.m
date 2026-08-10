@@ -244,8 +244,13 @@ resolved_step_x=options.StepX;
 resolved_step_z=options.StepZ;
 
 if options.AutomaticHalfWindowStride
+    if isfield(data,"background_cs_m_s")
+        background_cs=double(data.background_cs_m_s);
+    else
+        background_cs=double(options.CsGuessMPerS);
+    end
     physical_cfg=struct("dx",double(data.dx_m),"dz",double(data.dz_m), ...
-        "f0",double(data.frequency_hz),"cs_bg",double(data.background_cs_m_s));
+        "f0",double(data.frequency_hz),"cs_bg",background_cs);
     [~,sample_feat_cfg]=reqml.config.default_req_config( ...
         physical_cfg,complete_feature_config(sample_feat_cfg));
     stride=max(double(options.MinimumStridePixels), ...

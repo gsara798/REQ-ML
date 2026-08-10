@@ -5,6 +5,7 @@ arguments
     config_file {mustBeTextScalar}
     options.OutputDirectory {mustBeTextScalar} = ""
     options.Design struct = struct()
+    options.CampaignId {mustBeTextScalar} = ""
 end
 
 config_file=string(config_file);
@@ -18,6 +19,8 @@ design=options.Design;
 if isempty(fieldnames(design))
     design=reqml.homogeneous.materializeCartesianDesign(config);
 end
+campaign_id=string(options.CampaignId);
+if strlength(campaign_id)==0, campaign_id=string(config.campaign_id); end
 
 conditions=design.conditions;
 runs=design.runs;
@@ -34,7 +37,7 @@ end
 campaign=struct();
 campaign.schema_version="1.2";
 campaign.backend="swsynth";
-campaign.campaign_name=string(config.campaign_id);
+campaign.campaign_name=campaign_id;
 campaign.base_config=string(config.paths.simulation_base_config);
 campaign.runs=definitions;
 campaign.output=struct("directory", ...
@@ -49,7 +52,7 @@ write_json(paths.campaign_json,campaign);
 writetable(conditions,paths.conditions_csv);
 writetable(runs,paths.runs_csv);
 manifest=struct("schema_name",design.schema_name, ...
-    "schema_version",design.schema_version,"campaign_id",design.campaign_id, ...
+    "schema_version",design.schema_version,"campaign_id",campaign_id, ...
     "source_config",config_file,"condition_count",design.condition_count, ...
     "run_count",design.run_count,"req_M",double(config.req.M), ...
     "req_cs_guess_m_s",double(config.req.cs_guess_m_s), ...
