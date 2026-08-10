@@ -50,8 +50,10 @@ for index=1:height(specifications)
             "%s: %s",experiment.experiment_id,integrity.summary); end
     assert_exact_holdout(split,design.conditions,held_mask,experiment);
     model_spec=make_model_spec(config,experiment);
-    tic; model=reqml.training.fit_regression_model( ...
-        X,q_true,split.train_mask,model_spec); training_seconds=toc;
+    training_timer=tic;
+    model=reqml.training.fit_regression_model( ...
+        X,q_true,split.train_mask,model_spec);
+    training_seconds=toc(training_timer);
     q_pred=reqml.training.predict_regression_model(model,X,ClipRange=[.001 .999]);
     q_metrics=reqml.evaluation.evaluate_q_predictions( ...
         q_true,q_pred,split.partition,model_spec.id);
