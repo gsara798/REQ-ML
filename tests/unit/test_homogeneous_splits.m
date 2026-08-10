@@ -1,6 +1,20 @@
 function tests=test_homogeneous_splits
 tests=functiontests(localfunctions);
 end
+
+function testCompositionalConditionHoldoutHasZeroLeakage(testCase)
+[examples,conditions]=fixture();
+held=conditions.cs_m_s==3 & conditions.frequency_hz==400;
+split=reqml.homogeneous.makeConditionHoldoutSplit( ...
+    examples,conditions,held,Seed=17,HoldoutId="cs3_f400");
+report=reqml.splits.validate_split_integrity(examples,split);
+verifyTrue(testCase,report.valid,report.summary);
+test_conditions=unique(split.condition_id(split.test_mask));
+expected=conditions.condition_id(held);
+verifyEqual(testCase,sort(test_conditions),sort(expected));
+verifyEmpty(testCase,intersect(test_conditions, ...
+    unique(split.condition_id(split.train_mask))));
+end
 function setupOnce(~)
 root=fileparts(fileparts(fileparts(mfilename("fullpath"))));
 addpath(fullfile(root,"src"));
@@ -23,6 +37,16 @@ verifyEqual(testCase,a.partition,b.partition);
 test_conditions=unique(examples.campaign_condition_id(a.test_mask));
 rows=ismember(conditions.condition_id,test_conditions);
 verifyEqual(testCase,unique(conditions.frequency_hz(rows)),400);
+end
+function testCompleteHoldoutSpecificationCount(testCase)
+root=fileparts(fileparts(fileparts(mfilename("fullpath"))));
+config=jsondecode(fileread(fullfile(root,"configs","homogeneous", ...
+    "homogeneous_cartesian_q0_v1.json")));
+spec=reqml.homogeneous.buildHoldoutSpecifications(config);
+verifyEqual(testCase,height(spec),17);
+verifyEqual(testCase,groupcounts(categorical(spec.family)),[1;4;3;4;5]);
+verifyEqual(testCase,sum(spec.family~="compositional"),16);
+verifyEqual(testCase,spec.experiment_id(end),"compositional_cs3_f400");
 end
 function [examples,conditions]=fixture()
 condition_id=compose("c%02d",(1:12)');

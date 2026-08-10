@@ -75,5 +75,12 @@
     "num_learning_cycles": 160,
     "min_leaf_size": 8,
     "use_parallel": false
+  },
+  "generalization": {
+    "split_seed": 8501,
+    "model_seed": 8601,
+    "validation_fraction": 0.15,
+    "compositional_cs_m_s": 3.0,
+    "compositional_frequency_hz": 400
   }
 }
