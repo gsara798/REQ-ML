@@ -22,6 +22,10 @@ arguments
     options.MinimumPlacementsPerAxis (1,1) double = 5
     options.StepX (1,1) double = NaN
     options.StepZ (1,1) double = NaN
+    options.AutomaticHalfWindowStride (1,1) logical = false
+    options.MinimumStridePixels (1,1) double = 4
+    options.MaximumExamplesPerRun (1,1) double = Inf
+    options.ExampleSelectionSeedOffset (1,1) double = 0
 
     options.UseDirectedCenterSelection (1,1) logical = false
     options.PurityEdges (1,:) double = zeros(1,0)
@@ -236,12 +240,25 @@ end
 sample_feat_cfg = feat_cfg;
 center_selection = table();
 center_selection_diagnostics = struct();
+resolved_step_x=options.StepX;
+resolved_step_z=options.StepZ;
+
+if options.AutomaticHalfWindowStride
+    physical_cfg=struct("dx",double(data.dx_m),"dz",double(data.dz_m), ...
+        "f0",double(data.frequency_hz),"cs_bg",double(data.background_cs_m_s));
+    [~,sample_feat_cfg]=reqml.config.default_req_config( ...
+        physical_cfg,complete_feature_config(sample_feat_cfg));
+    stride=max(double(options.MinimumStridePixels), ...
+        ceil(0.5*double(sample_feat_cfg.win_size)));
+    resolved_step_x=stride;
+    resolved_step_z=stride;
+end
 
 extraction_arguments = {
     "DatasetId", options.DatasetId
     "SampleId", run.run_id
-    "StepX", options.StepX
-    "StepZ", options.StepZ
+    "StepX", resolved_step_x
+    "StepZ", resolved_step_z
     "StoreReqCurves", options.StoreReqCurves
     "UseWindowParfor", options.UseWindowParfor
     };
@@ -443,6 +460,19 @@ extraction = options.Extractor( ...
     sample_feat_cfg, ...
     extraction_arguments{:});
 
+quota=default_quota_diagnostics(height(extraction.examples));
+if isfinite(options.MaximumExamplesPerRun)
+    selection_seed=double(run.seed)+options.ExampleSelectionSeedOffset;
+    [extraction.examples,quota]=reqml.homogeneous.selectPatchQuota( ...
+        extraction.examples,options.MaximumExamplesPerRun,selection_seed);
+    extraction.sample_summary.example_count=height(extraction.examples);
+    if ismember("target_valid",string( ...
+            extraction.examples.Properties.VariableNames))
+        extraction.sample_summary.valid_example_count=sum( ...
+            extraction.examples.target_valid);
+    end
+end
+
 if ~isempty(center_selection)
     extraction.examples = attach_center_selection_metadata( ...
         extraction.examples, center_selection);
@@ -464,7 +494,7 @@ end
 summary_record = make_summary_record( ...
     run, ...
     readiness, ...
-    extraction.sample_summary);
+    extraction.sample_summary,quota,extraction,resolved_step_x,resolved_step_z);
 
 if ~isempty(center_selection)
     summary_record.selected_center_count = height(center_selection);
@@ -1160,7 +1190,7 @@ end
 
 
 function record = make_summary_record( ...
-        run, readiness, sample_summary)
+        run, readiness, sample_summary,quota,extraction,step_x,step_z)
 
 record = empty_summary_record();
 
@@ -1197,6 +1227,15 @@ record.minimum_material_purity = ...
 record.median_material_purity = ...
     double(sample_summary.median_material_purity);
 
+record.available_patch_count=double(quota.available_patch_count);
+record.selected_patch_count=double(quota.selected_patch_count);
+record.target_patch_count=double(quota.target_patch_count);
+record.deficit_patch_count=double(quota.deficit_patch_count);
+record.patch_width_px=resolve_extraction_scalar(extraction,"win_size",NaN);
+record.patch_height_px=record.patch_width_px;
+record.stride_x_px=resolve_step(step_x,extraction,"step_x");
+record.stride_z_px=resolve_step(step_z,extraction,"step_z");
+
 end
 
 function record = empty_summary_record()
@@ -1221,6 +1260,14 @@ record.example_count = NaN;
 record.valid_example_count = NaN;
 record.minimum_material_purity = NaN;
 record.median_material_purity = NaN;
+record.available_patch_count = NaN;
+record.selected_patch_count = NaN;
+record.target_patch_count = NaN;
+record.deficit_patch_count = NaN;
+record.patch_width_px = NaN;
+record.patch_height_px = NaN;
+record.stride_x_px = NaN;
+record.stride_z_px = NaN;
 record.selected_center_count = 0;
 record.analytic_target_example_count = 0;
 record.opportunistic_example_count = 0;
@@ -1239,6 +1286,31 @@ names = ["patch_outside_domain","insufficient_valid_fraction", ...
     "duplicate_center","target_cell_mismatch","invalid_truth_value"];
 end
 
+
+function quota=default_quota_diagnostics(available_count)
+quota=struct("available_patch_count",available_count, ...
+    "selected_patch_count",available_count,"target_patch_count",NaN, ...
+    "deficit_patch_count",0,"selection_seed",NaN, ...
+    "selected_candidate_indices",(1:available_count)',"complete",true);
+end
+
+
+function value=resolve_extraction_scalar(extraction,name,default_value)
+value=default_value;
+if isfield(extraction,"estimator") && ...
+        isfield(extraction.estimator,name)
+    candidate=double(extraction.estimator.(name));
+    if isscalar(candidate) && isfinite(candidate), value=candidate; end
+end
+end
+
+
+function value=resolve_step(requested,extraction,name)
+value=double(requested);
+if isfinite(value), return, end
+value=resolve_extraction_scalar(extraction,name,NaN);
+end
+
 function config = make_build_config(options)
 
 config = struct();
@@ -1252,6 +1324,10 @@ config.minimum_placements_per_axis = ...
     options.MinimumPlacementsPerAxis;
 config.step_x = options.StepX;
 config.step_z = options.StepZ;
+config.automatic_half_window_stride=options.AutomaticHalfWindowStride;
+config.minimum_stride_pixels=options.MinimumStridePixels;
+config.maximum_examples_per_run=options.MaximumExamplesPerRun;
+config.example_selection_seed_offset=options.ExampleSelectionSeedOffset;
 config.store_req_curves = ...
     options.StoreReqCurves;
 config.use_window_parfor = ...
