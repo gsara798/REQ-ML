@@ -137,7 +137,9 @@ for j=1:numel(vars)
     if vars(j)=="q_pred", clim([0 1]); end
     if vars(j)=="truth_material_purity", clim([.5 1]); end
     if geometry~="homogeneous"
-        hold on; contour(x_axis,z_axis,material,[1.5 1.5], ...
+        material_ids=unique(material(isfinite(material)));
+        boundary_level=mean(material_ids([1 end]));
+        hold on; contour(x_axis,z_axis,material,[boundary_level boundary_level], ...
             "k-","LineWidth",1.2); hold off
     end
 end

@@ -21,12 +21,18 @@ end
 roi=strings(n,1); distance_m=nan(n,1);
 mixed=isfinite(purity) & purity<1-1e-12;
 roi(mixed)="interface_band";
+finite_ids=material_id(isfinite(material_id));
+if isempty(finite_ids)
+    error("reqml:MissingExternalMaterialId", ...
+        "External ROI classification requires finite material IDs.");
+end
+background_id=min(finite_ids);
 for index=find(~mixed).'
     if geometry(index)=="inclusion"
-        if material_id(index)==1, roi(index)="background_far";
+        if material_id(index)==background_id, roi(index)="background_far";
         else, roi(index)="inclusion_core"; end
     elseif geometry(index)=="bilayer"
-        if material_id(index)==1, roi(index)="layer_1_core";
+        if material_id(index)==background_id, roi(index)="layer_1_core";
         else, roi(index)="layer_2_core"; end
     else
         roi(index)="homogeneous";

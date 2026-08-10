@@ -13,7 +13,7 @@ verifyEqual(testCase,s.sws_bias_percent(s.sampling_mode=="dense_map"),-.5,AbsTol
 end
 
 function testRoiUsesFullPatchPurity(testCase)
-geometry=repmat("inclusion",4,1); material=[1;2;1;2];
+geometry=repmat("inclusion",4,1); material=[0;1;0;1];
 purity=[1;1;.99;.8];
 roi=reqml.homogeneous.classifyExternalRoi(geometry,material,purity, ...
     (1:4)',(1:4)',.0005,.0005);
@@ -23,7 +23,7 @@ end
 
 function testBilayerRoiNames(testCase)
 roi=reqml.homogeneous.classifyExternalRoi(repmat("bilayer",3,1), ...
-    [1;2;2],[1;1;.95],[1;2;3]',[1;2;3]',.001,.001);
+    [0;1;1],[1;1;.95],[1;2;3]',[1;2;3]',.001,.001);
 verifyEqual(testCase,roi,["layer_1_core";"layer_2_core";"interface_band"]);
 end
 
