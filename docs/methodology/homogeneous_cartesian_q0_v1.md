@@ -182,11 +182,13 @@ warning.
 
 For Eikonal inclusion and bilayer controls (background 2 m/s, object/layer
 3 m/s), stride-matched global MAPE ranges from 2.679% to 2.981% for inclusions
-and from 2.681% to 4.464% for bilayers. Directional pure cores are accurate:
-inclusion core 0.213%, bilayer layer-1 core 0.506%, and layer-2 core 0.302%.
-Their corresponding interface bands are 4.826% and 4.721%. The lowest-purity
-reporting bin (`<0.7`) reaches 17.420% for the directional inclusion and
-10.905% for the directional bilayer. Intermediate/diffuse bilayer layer-1
+and from 2.681% to 4.464% for bilayers. Directional pure regions are accurate:
+inclusion background 0.213%, bilayer layer-1 core 0.302%, and layer-2 core
+0.506%. Their corresponding interface bands are 4.826% and 4.721%. The
+inclusion radius is too small relative to the REQ support to provide a pure
+object-core patch. The lowest-purity reporting bin (`<0.7`) reaches 17.420%
+for the directional inclusion and 10.905% for the directional bilayer.
+Intermediate/diffuse bilayer layer-2
 cores also degrade (up to 5.446%), showing that purity is not the only failure
 axis.
 
@@ -209,7 +211,7 @@ Truth purity is used only for diagnostics and is never supplied to Q0.
 The present result is **Case D**: leave-one-SWS-out and leave-one-field-out
 homogeneous generalization is poor enough that interpolation/generalization of
 Q0 should be addressed before heterogeneous retraining. The external maps also
-provide secondary Case-B-like evidence—many directional homogeneous cores are
+provide secondary Case-B-like evidence—many directional pure regions are
 accurate and interfaces/low-purity patches are worse—but this does not override
 Case D. Phase-2 purity training is therefore not started. A follow-up should
 first improve generalization without tuning to these external controls; it can
