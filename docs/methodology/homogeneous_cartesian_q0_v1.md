@@ -21,13 +21,16 @@ with (c_s \in \{1,2,3,4\}\) m/s,
 (f_0 \in \{200,300,400,500,600\}\) Hz,
 (\Delta x=\Delta z \in \{0.25,0.30,0.50\}\) mm, and field regime in
 `single`, `directional`, `intermediate`, or `diffuse`. This gives 240 physical
-conditions. Three deterministic, independent seed-controlled rotations per
+conditions. Three independent seed-controlled wavefield realizations per
 condition give 720 base runs.
 
 The four fields use respectively `(direction count, requested in-plane count,
 solid angle)` equal to `(1,1,0.01)`, `(4,2,0.5)`, `(16,4,pi)`, and
-`(32,8,4*pi)`. The simulation framework records the realized direction vectors
-and rotation axis in sample provenance.
+`(32,8,4*pi)`. REQ-ML deterministically derives a different cap axis from each
+run seed. In the framework, the same seed also controls source phase, transverse
+polarization, and configured amplitude jitter. The framework records realized
+directions, support axis, amplitudes, phases, and polarization vectors in sample
+provenance. A realization is therefore not merely a rigid rotation.
 
 ## Patch geometry and quota
 
@@ -40,11 +43,26 @@ s_x=s_z=\max(4,\lceil W/2\rceil).
 \]
 
 The domain has `W + 9*s` points per spatial dimension, yielding a deterministic
-10 by 10 grid of candidate centers. A run-seed permutation selects at most 100
-unique centers without replacement. Available, selected, target, and deficit
-counts are persisted per run. Structural deficits request the next deterministic
-larger domain; non-structural deficits request a new independent realization.
-The coverage gate must pass before training.
+10 by 10 grid of candidate centers. In the nominal case all 100 unique,
+stride-separated candidates are retained in extraction order; no random
+subsampling occurs when available count equals target count. If more than 100
+candidates are available, a seeded permutation samples without replacement. If
+fewer are available, all are retained and deficit logic applies. Available,
+selected, target, and deficit counts are persisted per run. Structural deficits
+request the next deterministic larger domain; non-structural deficits request a
+new independent realization. The coverage gate must pass before training.
+
+## Workspace setup
+
+Versioned configurations use `${REPOSITORY_ROOT}` for REQ-ML artifacts and
+`${SWSIM_ROOT}` for the simulation framework. Configure, for example:
+
+```text
+SWSIM_ROOT=/path/to/shear-wave-simulation-framework
+```
+
+Resolution fails with `reqml:MissingWorkspaceRoot` when a required root is not
+configured; it never substitutes a developer-specific home directory.
 
 ## Executed campaign and dataset
 
@@ -58,6 +76,9 @@ runs with no failed or supplementary runs. All 240 conditions contain exactly
 - `M=2` and `cs_guess=3` for every patch;
 - unique example IDs and unique run/center records;
 - no geometry or quota deficits.
+
+An explicit comparison of planned versus extracted patch width, height, and
+both stride components found zero mismatches across all 720 runs.
 
 Recorded runtimes were 255.87 seconds for the full simulation campaign and
 172.46 seconds for final dataset construction.
