@@ -1,0 +1,35 @@
+{
+  "schema_name": "reqml_homogeneous_q0_external_transfer",
+  "schema_version": "1.0",
+  "evaluation_id": "homogeneous_q0_external_transfer_v1",
+  "model_bundle": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v1/training/q0_bagged_v1/model_bundle.mat",
+  "output_root": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v1/external/transfer_v1",
+  "feature_config": {"M": 2, "cs_guess_m_s": 3.0, "use_window_parfor": true},
+  "cases": [
+    {"label":"eikonal_hom_cs2_directional","backend":"eikonal","geometry":"homogeneous","field_regime":"directional","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_homogeneous_matched_f400_dx0p25_v1/run_000001_98b9a5d7af0f/data/wavefield_sample.mat"},
+    {"label":"eikonal_hom_cs2_intermediate","backend":"eikonal","geometry":"homogeneous","field_regime":"intermediate","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_homogeneous_matched_f400_dx0p25_v1/run_000002_b30be7d25fc1/data/wavefield_sample.mat"},
+    {"label":"eikonal_hom_cs2_diffuse","backend":"eikonal","geometry":"homogeneous","field_regime":"diffuse","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_homogeneous_matched_f400_dx0p25_v1/run_000003_ab99ab41c6ef/data/wavefield_sample.mat"},
+    {"label":"eikonal_hom_cs3_directional","backend":"eikonal","geometry":"homogeneous","field_regime":"directional","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_homogeneous_directional_cs3_matched_f400_dx0p25_v1/run_000001_42c6524811aa/data/wavefield_sample.mat"},
+
+    {"label":"eikonal_inclusion_directional","backend":"eikonal","geometry":"inclusion","field_regime":"directional","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_circular_inclusion_matched_f400_dx0p25_v1/run_000001_d05a39907674/data/wavefield_sample.mat"},
+    {"label":"eikonal_inclusion_intermediate","backend":"eikonal","geometry":"inclusion","field_regime":"intermediate","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_circular_inclusion_matched_f400_dx0p25_v1/run_000002_8e1a337e18a3/data/wavefield_sample.mat"},
+    {"label":"eikonal_inclusion_diffuse","backend":"eikonal","geometry":"inclusion","field_regime":"diffuse","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_circular_inclusion_matched_f400_dx0p25_v1/run_000003_e1af48190946/data/wavefield_sample.mat"},
+    {"label":"eikonal_bilayer_directional","backend":"eikonal","geometry":"bilayer","field_regime":"directional","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_bilayer_matched_f400_dx0p25_v1/run_000001_b945eb837097/data/wavefield_sample.mat"},
+    {"label":"eikonal_bilayer_intermediate","backend":"eikonal","geometry":"bilayer","field_regime":"intermediate","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_bilayer_matched_f400_dx0p25_v1/run_000002_afa92e1609fa/data/wavefield_sample.mat"},
+    {"label":"eikonal_bilayer_diffuse","backend":"eikonal","geometry":"bilayer","field_regime":"diffuse","sample_file":"${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_bilayer_matched_f400_dx0p25_v1/run_000003_84753ae2732c/data/wavefield_sample.mat"},
+
+    {"label":"kwave_hom_cs2_single","backend":"kwave","geometry":"homogeneous","field_regime":"single","sample_file":"${SWSIM_ROOT}/outputs/meeting_q0_homogeneous_directional_single_f400_cs2_50mm/data/wavefield_sample.mat"},
+    {"label":"kwave_hom_cs3_single","backend":"kwave","geometry":"homogeneous","field_regime":"single","sample_file":"${SWSIM_ROOT}/outputs/meeting_q0_homogeneous_directional_single_f400_cs3_50mm/data/wavefield_sample.mat"},
+    {"label":"kwave_hom_cs2_intermediate","backend":"kwave","geometry":"homogeneous","field_regime":"intermediate","sample_file":"${SWSIM_ROOT}/outputs/meeting_q0_homogeneous_partial_3d_n8_p2_f400_50mm/data/wavefield_sample.mat"},
+    {"label":"kwave_hom_cs2_diffuse","backend":"kwave","geometry":"homogeneous","field_regime":"diffuse","sample_file":"${SWSIM_ROOT}/outputs/meeting_q0_homogeneous_generated_angular_n32_p8_f400_50mm_ny48/data/wavefield_sample.mat"},
+    {"label":"kwave_inclusion_single","backend":"kwave","geometry":"inclusion","field_regime":"single","sample_file":"${SWSIM_ROOT}/outputs/meeting_q0_sphere_directional_single_f400_bg2_obj3_50mm_r8mm/data/wavefield_sample.mat"},
+    {"label":"kwave_inclusion_intermediate","backend":"kwave","geometry":"inclusion","field_regime":"intermediate","sample_file":"${SWSIM_ROOT}/outputs/meeting_q0_sphere_partial_3d_n8_p2_f400_50mm_r8mm/data/wavefield_sample.mat"},
+    {"label":"kwave_inclusion_diffuse","backend":"kwave","geometry":"inclusion","field_regime":"diffuse","sample_file":"${SWSIM_ROOT}/outputs/meeting_q0_sphere_generated_angular_n32_p8_f400_bg2_obj3_50mm_r8mm/data/wavefield_sample.mat"}
+  ],
+  "availability_notes": {
+    "eikonal_single": "No matched single-field Eikonal sample was available; no solver run was added solely to fill this display cell.",
+    "kwave_directional": "Existing k-Wave controls use one source (single), N=8 intermediate, and N=32 diffuse.",
+    "kwave_cs3_fields": "Only the existing cs=3 single case is included; expensive missing 3D runs were not generated.",
+    "kwave_bilayer": "The framework supports bilayers, but no validated matched 50 mm output existed; no costly new simulation was launched."
+  }
+}
