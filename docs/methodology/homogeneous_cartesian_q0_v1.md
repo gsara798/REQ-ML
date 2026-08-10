@@ -122,9 +122,98 @@ homogeneous controls. The deployment contract remained `M=2`, `cs_guess=3`.
 
 External evaluation took 77.59 seconds. These results remove the earlier
 approximately 10% systematic 3-m/s underestimation on both backends. They do
-not establish heterogeneous transfer; inclusion, bilayer, and sphere samples
-remain out-of-distribution diagnostics for a later phase and were not added to
-training.
+not by themselves establish heterogeneous transfer.
+
+## Complete condition-level holdout study
+
+The frozen methodology was also trained independently for every leave-one-level
+holdout. Each split excludes the complete physical condition from training,
+uses a reproducible validation subset of the remaining conditions, and keeps
+the same predictor order, 160-tree bagged model, leaf size 8, `M=2`, and
+`cs_guess=3`. No holdout-specific tuning was performed. The 17 final model fits
+used 560.10 seconds of measured training time in total.
+
+| Family | Held-out value | Test SWS MAPE (%) | Bias (%) |
+|---|---|---:|---:|
+| SWS | 1, 2, 3, 4 m/s | 8.090, 5.840, 13.254, 20.284 | 8.054, 3.233, 7.808, -20.284 |
+| Frequency | 200, 300, 400, 500, 600 Hz | 1.092, 1.136, 0.867, 1.062, 1.688 | 0.068, -0.099, 0.060, 0.152, -0.498 |
+| Spacing | 0.25, 0.30, 0.50 mm | 0.936, 1.432, 1.843 | 0.217, -0.610, -0.217 |
+| Field | single, directional, intermediate, diffuse | 0.454, 1.640, 7.392, 6.620 | -0.339, -0.349, 6.592, 6.329 |
+| Compositional | SWS=3 m/s AND f=400 Hz | 1.303 | 0.965 |
+
+The model interpolates frequency and spacing well and composes the jointly
+missing 3-m/s/400-Hz condition successfully. It does not extrapolate reliably
+to an entirely unseen SWS level, and it has a substantial geometry-regime gap
+for unseen intermediate and diffuse fields. The best holdout is `field_single`
+(0.454% MAPE); the worst is `cs_4` (20.284%). This is the decisive limitation
+for the Phase-2 gate.
+
+## Frozen external transfer matrix
+
+The expanded external study reuses standardized existing samples and never
+re-trains Q0. Dense `StepX=StepZ=1` predictions provide spatial maps. Metrics
+are also evaluated on the deterministic subset
+
+\[
+s_x=s_z=\max(4,\lceil W/2\rceil),
+\]
+
+matching the training stride. Dense patch counts are spatially correlated and
+must not be interpreted as independent observations. The exact source tables
+contain both sampling modes.
+
+Available homogeneous 400-Hz controls gave the following stride-matched MAPE:
+
+| Backend | SWS | Field | MAPE (%) | Bias (%) |
+|---|---:|---|---:|---:|
+| Eikonal | 2 | directional | 0.092 | -0.033 |
+| Eikonal | 2 | intermediate | 0.942 | -0.282 |
+| Eikonal | 2 | diffuse | 0.963 | 0.716 |
+| Eikonal | 3 | directional | 0.181 | -0.150 |
+| k-Wave | 2 | single | 0.630 | -0.470 |
+| k-Wave | 2 | intermediate | 1.532 | -0.974 |
+| k-Wave | 2 | diffuse | 6.079 | 5.996 |
+| k-Wave | 3 | single | 0.826 | -0.360 |
+
+The dense values reproduce the previously frozen directional/single transfer
+values (Eikonal 0.074% and 0.175%; k-Wave 0.832% and 0.595%). The k-Wave
+diffuse result is materially worse and agrees with the internal unseen-field
+warning.
+
+For Eikonal inclusion and bilayer controls (background 2 m/s, object/layer
+3 m/s), stride-matched global MAPE ranges from 2.679% to 2.981% for inclusions
+and from 2.681% to 4.464% for bilayers. Directional pure cores are accurate:
+inclusion core 0.213%, bilayer layer-1 core 0.506%, and layer-2 core 0.302%.
+Their corresponding interface bands are 4.826% and 4.721%. The lowest-purity
+reporting bin (`<0.7`) reaches 17.420% for the directional inclusion and
+10.905% for the directional bilayer. Intermediate/diffuse bilayer layer-1
+cores also degrade (up to 5.446%), showing that purity is not the only failure
+axis.
+
+For the k-Wave sphere, stride-matched global MAPE is 2.799% (single), 5.027%
+(intermediate), and 3.452% (diffuse). The 8-mm-radius sphere is not large
+enough to contain any pure inclusion-core patch under the current REQ support;
+therefore these samples cannot establish k-Wave inclusion-core transfer. Pure
+background patches remain accurate where present (0.126--1.490% MAPE), while
+the `<0.7` purity bin reaches 9.436--17.212%. The framework supports native 3D
+bilayers, but no validated, matched 50-mm k-Wave bilayer output existed. A new
+expensive simulation was not launched merely to fill that cell.
+
+ROIs use an exact support-based convention: `interface_band` means that the
+full discrete REQ window contains more than one material (`purity < 1`);
+otherwise the center material defines the appropriate core/background ROI.
+Truth purity is used only for diagnostics and is never supplied to Q0.
+
+## Decision gate
+
+The present result is **Case D**: leave-one-SWS-out and leave-one-field-out
+homogeneous generalization is poor enough that interpolation/generalization of
+Q0 should be addressed before heterogeneous retraining. The external maps also
+provide secondary Case-B-like evidence—many directional homogeneous cores are
+accurate and interfaces/low-purity patches are worse—but this does not override
+Case D. Phase-2 purity training is therefore not started. A follow-up should
+first improve generalization without tuning to these external controls; it can
+then test a larger k-Wave inclusion core and matched native k-Wave bilayer.
 
 ## Output layout
 
@@ -134,6 +223,8 @@ training.
 - Frozen splits: `outputs/homogeneous_cartesian_q0_v1/splits/`
 - Model and internal diagnostics: `outputs/homogeneous_cartesian_q0_v1/training/q0_bagged_v1/`
 - External diagnostics: `outputs/homogeneous_cartesian_q0_v1/external_controls/`
+- Complete holdouts: `outputs/homogeneous_cartesian_q0_v1/held_out/v1/`
+- External transfer tables/maps: `outputs/homogeneous_cartesian_q0_v1/external/transfer_v1/`
 - Execution logs: `outputs/homogeneous_cartesian_q0_v1/logs/`
 
 Generated campaign data, MAT files, plots, CSV reports, and logs are ignored by
