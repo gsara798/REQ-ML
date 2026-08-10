@@ -204,11 +204,12 @@ end
 
 
 function paths=generate_study_figures(summary,output)
-figure_dir=fullfile(fileparts(fileparts(output)),"figures","held_out_v1");
+figure_dir=fullfile(output,"figures");
 if ~isfolder(figure_dir), mkdir(figure_dir); end
 families=["cs","frequency","dx","field"]; paths=struct();
 for i=1:numel(families)
     family=families(i); data=summary(summary.family==family,:);
+    if isempty(data), continue; end
     path=fullfile(figure_dir,"leave_one_"+family+"_out_mape_bias");
     f=figure("Visible","off","Color","w","Position",[100 100 850 580]);
     x=categorical(data.held_out_label,data.held_out_label);
