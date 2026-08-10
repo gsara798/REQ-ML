@@ -16,10 +16,13 @@ if isempty(fieldnames(design))
 end
 repo_root=string(fileparts(fileparts(fileparts(fileparts( ...
     mfilename("fullpath"))))));
-output_root=resolve_path(string(config.paths.output_root),repo_root);
+output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.output_root),RepositoryRoot=repo_root);
 campaign_csv=string(options.CampaignRunsCsv);
 if strlength(campaign_csv)==0
-    campaign_csv=fullfile(string(config.paths.simulation_output_root), ...
+    simulation_output_root=reqml.config.resolveWorkspacePath( ...
+        string(config.paths.simulation_output_root),RepositoryRoot=repo_root);
+    campaign_csv=fullfile(simulation_output_root, ...
         string(config.campaign_id),"campaign_runs.csv");
 end
 feat=reqml.config.default_feature_config( ...
@@ -49,17 +52,17 @@ if options.SaveOutputs
     paths.run_coverage=fullfile(coverage_dir,"run_coverage.csv");
     paths.condition_coverage=fullfile(coverage_dir,"condition_coverage.csv");
     paths.validation=fullfile(coverage_dir,"dataset_validation.csv");
+    paths.patch_geometry_audit=fullfile(coverage_dir, ...
+        "patch_geometry_audit.csv");
+    paths.patch_geometry_mismatches=fullfile(coverage_dir, ...
+        "patch_geometry_mismatches.csv");
     writetable(coverage.runs,paths.run_coverage);
     writetable(coverage.conditions,paths.condition_coverage);
     writetable(validation.checks,paths.validation);
+    writetable(coverage.geometry_audit,paths.patch_geometry_audit);
+    writetable(coverage.geometry_audit(~coverage.geometry_audit.geometry_match,:), ...
+        paths.patch_geometry_mismatches);
 end
 result=struct("dataset",dataset,"coverage",coverage, ...
     "validation",validation,"design",design,"paths",paths);
-end
-
-
-function value=resolve_path(value,root)
-if startsWith(value,"${REPOSITORY_ROOT}/")
-    value=fullfile(root,extractAfter(value,"${REPOSITORY_ROOT}/"));
-end
 end

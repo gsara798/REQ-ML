@@ -11,7 +11,12 @@ end
 config_file=string(config_file);
 config=jsondecode(fileread(config_file));
 repo_root=resolve_repository_root();
-output_root=resolve_path(string(config.paths.output_root),repo_root);
+output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.output_root),RepositoryRoot=repo_root);
+simulation_base_config=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.simulation_base_config),RepositoryRoot=repo_root);
+simulation_output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.simulation_output_root),RepositoryRoot=repo_root);
 output=string(options.OutputDirectory);
 if strlength(output)==0, output=fullfile(output_root,"campaign"); end
 if ~isfolder(output), mkdir(output); end
@@ -38,10 +43,10 @@ campaign=struct();
 campaign.schema_version="1.2";
 campaign.backend="swsynth";
 campaign.campaign_name=campaign_id;
-campaign.base_config=string(config.paths.simulation_base_config);
+campaign.base_config=simulation_base_config;
 campaign.runs=definitions;
 campaign.output=struct("directory", ...
-    string(config.paths.simulation_output_root));
+    simulation_output_root);
 
 paths=struct();
 paths.campaign_json=fullfile(output,"simulation_campaign.json");
@@ -78,11 +83,6 @@ end
 
 function root=resolve_repository_root()
 root=string(fileparts(fileparts(fileparts(fileparts(mfilename("fullpath"))))));
-end
-function value=resolve_path(value,root)
-if startsWith(value,"${REPOSITORY_ROOT}/")
-    value=fullfile(root,extractAfter(value,"${REPOSITORY_ROOT}/"));
-end
 end
 function write_json(path,value)
 fid=fopen(path,"w");

@@ -15,22 +15,22 @@
     {
       "label": "eikonal_homogeneous_directional_cs2",
       "backend": "projected3d_eikonal",
-      "sample_file": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns/scientific/reqml_eikonal_homogeneous_matched_f400_dx0p25_v1/run_000001_98b9a5d7af0f/data/wavefield_sample.mat"
+      "sample_file": "${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_homogeneous_matched_f400_dx0p25_v1/run_000001_98b9a5d7af0f/data/wavefield_sample.mat"
     },
     {
       "label": "eikonal_homogeneous_directional_cs3",
       "backend": "projected3d_eikonal",
-      "sample_file": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns/scientific/reqml_eikonal_homogeneous_directional_cs3_matched_f400_dx0p25_v1/run_000001_42c6524811aa/data/wavefield_sample.mat"
+      "sample_file": "${SWSIM_ROOT}/outputs/campaigns/scientific/reqml_eikonal_homogeneous_directional_cs3_matched_f400_dx0p25_v1/run_000001_42c6524811aa/data/wavefield_sample.mat"
     },
     {
       "label": "kwave_homogeneous_directional_cs2",
       "backend": "kwave_3d",
-      "sample_file": "/Users/sara/local/shear-wave-simulation-framework/outputs/meeting_q0_homogeneous_directional_single_f400_cs2_50mm/data/wavefield_sample.mat"
+      "sample_file": "${SWSIM_ROOT}/outputs/meeting_q0_homogeneous_directional_single_f400_cs2_50mm/data/wavefield_sample.mat"
     },
     {
       "label": "kwave_homogeneous_directional_cs3",
       "backend": "kwave_3d",
-      "sample_file": "/Users/sara/local/shear-wave-simulation-framework/outputs/meeting_q0_homogeneous_directional_single_f400_cs3_50mm/data/wavefield_sample.mat"
+      "sample_file": "${SWSIM_ROOT}/outputs/meeting_q0_homogeneous_directional_single_f400_cs3_50mm/data/wavefield_sample.mat"
     }
   ]
 }

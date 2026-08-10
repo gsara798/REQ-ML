@@ -22,14 +22,16 @@ design.campaign_id=string(config.campaign_id)+"_smoke";
 
 repo_root=string(fileparts(fileparts(fileparts(fileparts( ...
     mfilename("fullpath"))))));
-output_root=resolve_path(string(config.paths.output_root),repo_root);
+output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.output_root),RepositoryRoot=repo_root);
 smoke_root=fullfile(output_root,"smoke");
 campaign_dir=fullfile(smoke_root,"campaign");
 written=reqml.homogeneous.writeCartesianCampaign(config_file, ...
     OutputDirectory=campaign_dir,Design=design, ...
     CampaignId=design.campaign_id);
 
-framework_root=string(config.paths.simulation_framework_root);
+framework_root=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.simulation_framework_root),RepositoryRoot=repo_root);
 framework_src=fullfile(framework_root,"src");
 addpath(framework_src);
 cleanup=onCleanup(@() rmpath(framework_src));
@@ -78,10 +80,5 @@ if any(abs(double(examples.truth_material_purity)-1)>1e-12) || ...
         any(abs(double(examples.REQ_cs_guess_m_s)-3)>1e-12)
     error("reqml:HomogeneousSmokeInvariantFailed", ...
         "Smoke dataset violated homogeneous or REQ invariants.");
-end
-end
-function value=resolve_path(value,root)
-if startsWith(value,"${REPOSITORY_ROOT}/")
-    value=fullfile(root,extractAfter(value,"${REPOSITORY_ROOT}/"));
 end
 end

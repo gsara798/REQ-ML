@@ -40,12 +40,22 @@ examples=table(["e1";"e2"],["r1";"r2"],[1;2],[1;2], ...
     "REQ_cs_guess_m_s","target_valid"]);
 dataset=struct("examples",examples);
 coverage=struct("complete",true,"completed_condition_count",240, ...
-    "condition_count",240);
+    "condition_count",240,"geometry_match",true, ...
+    "geometry_mismatch_count",0);
 report=reqml.homogeneous.validateDataset(dataset,d,coverage,cfg);
 verifyTrue(testCase,report.valid);
 dataset.examples.truth_material_purity(2)=.9;
 verifyError(testCase,@() reqml.homogeneous.validateDataset( ...
     dataset,d,coverage,cfg),"reqml:HomogeneousCartesianDatasetGateFailed");
+end
+
+function testPlannedAndExtractedGeometryMismatchIsAudited(testCase)
+[d,csv,s]=fixture(100);
+s.stride_x_px(2)=s.stride_x_px(2)+1;
+coverage=reqml.homogeneous.summarizeCoverage(d,csv,s);
+verifyFalse(testCase,coverage.geometry_match);
+verifyEqual(testCase,coverage.geometry_mismatch_count,1);
+verifyEqual(testCase,find(~coverage.geometry_audit.geometry_match),2);
 end
 function [d,csv,s,cfg]=fixture(selected)
 cfg=jsondecode(fileread(config_path()));

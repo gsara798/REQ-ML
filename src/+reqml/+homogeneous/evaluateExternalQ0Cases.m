@@ -8,8 +8,14 @@ end
 config_file=string(config_file);
 config=jsondecode(fileread(config_file));
 root=string(fileparts(fileparts(fileparts(fileparts(mfilename("fullpath"))))));
-model_file=resolve_path(string(config.model_bundle),root);
-output_root=resolve_path(string(config.output_root),root);
+model_file=reqml.config.resolveWorkspacePath( ...
+    string(config.model_bundle),RepositoryRoot=root);
+output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.output_root),RepositoryRoot=root);
+for index=1:numel(config.cases)
+    config.cases(index).sample_file=reqml.config.resolveWorkspacePath( ...
+        string(config.cases(index).sample_file),RepositoryRoot=root);
+end
 validate_config(config,model_file,output_root);
 loaded=load(model_file,"model","model_metadata","predictor_names");
 model=loaded.model;
@@ -35,7 +41,7 @@ for index=1:numel(config.cases)
     examples.campaign_frequency_hz=repmat( ...
         double(data.frequency_hz),height(examples),1);
     contract=reqml.training.validate_predictor_contract( ...
-        examples,predictor_names,reqml.training.scientific_5d_predictor_registry());
+        examples,predictor_names,reqml.training.q0_predictor_registry());
     if ~contract.valid
         error("reqml:InvalidExternalQ0PredictorContract","%s",contract.summary);
     end
@@ -150,9 +156,4 @@ fid=fopen(path,"w"); if fid<0, error("reqml:CannotWriteExternalQ0Manifest", ...
         "Cannot write %s",path); end
 cleanup=onCleanup(@() fclose(fid));
 fprintf(fid,"%s\n",jsonencode(value,PrettyPrint=true));
-end
-function value=resolve_path(value,root)
-if startsWith(value,"${REPOSITORY_ROOT}/")
-    value=fullfile(root,extractAfter(value,"${REPOSITORY_ROOT}/"));
-end
 end

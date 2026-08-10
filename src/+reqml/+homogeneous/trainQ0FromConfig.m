@@ -10,7 +10,8 @@ end
 config_file=string(config_file);
 config=jsondecode(fileread(config_file));
 root=string(fileparts(fileparts(fileparts(fileparts(mfilename("fullpath"))))));
-output_root=resolve_path(string(config.paths.output_root),root);
+output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.output_root),RepositoryRoot=root);
 dataset_path=string(options.DatasetPath);
 if strlength(dataset_path)==0
     dataset_path=fullfile(output_root,"dataset","examples.mat");
@@ -22,7 +23,7 @@ if strlength(split_path)==0
 end
 loaded=load(dataset_path,"examples"); examples=loaded.examples;
 frozen=reqml.splits.load_frozen_training_split(examples,split_path);
-registry=reqml.training.scientific_5d_predictor_registry();
+registry=reqml.training.q0_predictor_registry();
 contract=reqml.training.validate_predictor_contract( ...
     examples,registry.q_spectrum_predictors,registry);
 if ~contract.valid
@@ -169,9 +170,4 @@ fid=fopen(path,"w"); if fid<0, error("reqml:CannotWriteQ0Manifest", ...
         "Cannot write %s",path); end
 cleanup=onCleanup(@() fclose(fid));
 fprintf(fid,"%s\n",jsonencode(value,PrettyPrint=true));
-end
-function value=resolve_path(value,root)
-if startsWith(value,"${REPOSITORY_ROOT}/")
-    value=fullfile(root,extractAfter(value,"${REPOSITORY_ROOT}/"));
-end
 end

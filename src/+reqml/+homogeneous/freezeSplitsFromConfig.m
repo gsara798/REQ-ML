@@ -8,7 +8,8 @@ end
 
 config=jsondecode(fileread(config_file));
 root=string(fileparts(fileparts(fileparts(fileparts(mfilename("fullpath"))))));
-output_root=resolve_path(string(config.paths.output_root),root);
+output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.paths.output_root),RepositoryRoot=root);
 dataset_path=string(options.DatasetPath);
 if strlength(dataset_path)==0
     dataset_path=fullfile(output_root,"dataset","examples.mat");
@@ -63,9 +64,4 @@ paths=reqml.splits.save_training_split_manifest( ...
     examples,split,folds,output,DatasetPath=dataset_path);
 result=struct("split",split,"folds",folds,"split_integrity",integrity, ...
     "fold_integrity",fold_integrity,"paths",paths);
-end
-function value=resolve_path(value,root)
-if startsWith(value,"${REPOSITORY_ROOT}/")
-    value=fullfile(root,extractAfter(value,"${REPOSITORY_ROOT}/"));
-end
 end

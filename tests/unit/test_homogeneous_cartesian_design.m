@@ -1,9 +1,15 @@
 function tests=test_homogeneous_cartesian_design
 tests=functiontests(localfunctions);
 end
-function setupOnce(~)
+function setupOnce(testCase)
 root=fileparts(fileparts(fileparts(mfilename("fullpath"))));
 addpath(fullfile(root,"src"));
+testCase.TestData.previous_swsim_root=getenv("SWSIM_ROOT");
+setenv("SWSIM_ROOT",fullfile(fileparts(root), ...
+    "shear-wave-simulation-framework"));
+end
+function teardownOnce(testCase)
+setenv("SWSIM_ROOT",testCase.TestData.previous_swsim_root);
 end
 function testFullCartesianCountsAndValues(testCase)
 cfg=load_config(); d=reqml.homogeneous.materializeCartesianDesign(cfg);

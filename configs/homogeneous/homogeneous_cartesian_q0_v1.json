@@ -4,9 +4,9 @@
   "campaign_id": "homogeneous_cartesian_q0_v1",
   "paths": {
     "output_root": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v1",
-    "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework",
-    "simulation_base_config": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
-    "simulation_output_root": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns"
+    "simulation_framework_root": "${SWSIM_ROOT}",
+    "simulation_base_config": "${SWSIM_ROOT}/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
+    "simulation_output_root": "${SWSIM_ROOT}/outputs/campaigns"
   },
   "design": {
     "cs_m_s": [1, 2, 3, 4],

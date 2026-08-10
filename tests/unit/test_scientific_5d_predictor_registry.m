@@ -125,6 +125,18 @@ verifyEqual(testCase, ...
 
 end
 
+function testGenericQ0RegistryIsExactlyLegacyCompatible(testCase)
+generic=reqml.training.q0_predictor_registry();
+legacy=reqml.training.scientific_5d_predictor_registry();
+verifyEqual(testCase,generic.q_spectrum_predictors, ...
+    legacy.q_spectrum_predictors);
+verifyEqual(testCase,generic.operational_predictors, ...
+    legacy.operational_predictors);
+verifyEqual(testCase,generic.spectral_predictors,legacy.spectral_predictors);
+verifyEqual(testCase,generic.forbidden_exact_names, ...
+    legacy.forbidden_exact_names);
+end
+
 function examples = load_scientific_examples()
 
 root = fileparts(fileparts(fileparts( ...

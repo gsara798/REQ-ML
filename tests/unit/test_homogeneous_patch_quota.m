@@ -7,8 +7,8 @@ addpath(fullfile(root,"src"));
 end
 function testSelectsExactQuotaDeterministically(testCase)
 candidates=fixture_candidates(150);
-[a,da]=reqml.homogeneous.selectPatchQuota(candidates,100,991);
-[b,db]=reqml.homogeneous.selectPatchQuota(candidates,100,991);
+[a,da]=reqml.datasets.selectPatchQuota(candidates,100,991);
+[b,db]=reqml.datasets.selectPatchQuota(candidates,100,991);
 verifyEqual(testCase,a,b);
 verifyEqual(testCase,da,db);
 verifyEqual(testCase,height(a),100);
@@ -17,13 +17,13 @@ verifyEqual(testCase,sort(a.quota_selection_rank),(1:100)');
 end
 function testDifferentSeedChangesSubset(testCase)
 candidates=fixture_candidates(150);
-a=reqml.homogeneous.selectPatchQuota(candidates,100,991);
-b=reqml.homogeneous.selectPatchQuota(candidates,100,992);
+a=reqml.datasets.selectPatchQuota(candidates,100,991);
+b=reqml.datasets.selectPatchQuota(candidates,100,992);
 verifyNotEqual(testCase,sort(a.example_id),sort(b.example_id));
 end
 function testRetainsAllAndReportsDeficit(testCase)
 candidates=fixture_candidates(73);
-[selected,d]=reqml.homogeneous.selectPatchQuota(candidates,100,991);
+[selected,d]=reqml.datasets.selectPatchQuota(candidates,100,991);
 verifyEqual(testCase,height(selected),73);
 verifyEqual(testCase,d.deficit_patch_count,27);
 verifyFalse(testCase,d.complete);
@@ -31,8 +31,16 @@ verifyEqual(testCase,selected.example_id,candidates.example_id);
 end
 function testRejectsDuplicateCandidateIds(testCase)
 candidates=fixture_candidates(5); candidates.example_id(5)=candidates.example_id(1);
-verifyError(testCase,@() reqml.homogeneous.selectPatchQuota( ...
+verifyError(testCase,@() reqml.datasets.selectPatchQuota( ...
     candidates,3,10),"reqml:DuplicatePatchQuotaCandidate");
+end
+
+function testCompatibilityWrapperMatchesGenericUtility(testCase)
+candidates=fixture_candidates(130);
+[generic,generic_d]=reqml.datasets.selectPatchQuota(candidates,100,991);
+[legacy,legacy_d]=reqml.homogeneous.selectPatchQuota(candidates,100,991);
+verifyEqual(testCase,legacy,generic);
+verifyEqual(testCase,legacy_d,generic_d);
 end
 function candidates=fixture_candidates(n)
 candidates=table(compose("example_%04d",(1:n)'),(1:n)', ...
