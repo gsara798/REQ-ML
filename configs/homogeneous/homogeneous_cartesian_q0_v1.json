@@ -1,0 +1,79 @@
+{
+  "schema_name": "reqml_homogeneous_cartesian_q0_config",
+  "schema_version": "1.0",
+  "campaign_id": "homogeneous_cartesian_q0_v1",
+  "paths": {
+    "output_root": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v1",
+    "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework",
+    "simulation_base_config": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
+    "simulation_output_root": "/Users/sara/local/shear-wave-simulation-framework/outputs/campaigns"
+  },
+  "design": {
+    "cs_m_s": [1, 2, 3, 4],
+    "frequency_hz": [200, 300, 400, 500, 600],
+    "spacing_m": [0.00025, 0.00030, 0.00050],
+    "base_realizations_per_condition": 3,
+    "base_seed": 810000,
+    "condition_seed_stride": 100
+  },
+  "field_regimes": [
+    {
+      "name": "single",
+      "direction_count": 1,
+      "in_plane_count": 1,
+      "solid_angle_sr": 0.01
+    },
+    {
+      "name": "directional",
+      "direction_count": 4,
+      "in_plane_count": 2,
+      "solid_angle_sr": 0.5
+    },
+    {
+      "name": "intermediate",
+      "direction_count": 16,
+      "in_plane_count": 4,
+      "solid_angle_sr": 3.141592653589793
+    },
+    {
+      "name": "diffuse",
+      "direction_count": 32,
+      "in_plane_count": 8,
+      "solid_angle_sr": 12.566370614359172
+    }
+  ],
+  "req": {
+    "M": 2,
+    "cs_guess_m_s": 3.0
+  },
+  "patch_sampling": {
+    "target_patches_per_run": 100,
+    "minimum_stride_pixels": 4,
+    "stride_window_fraction": 0.5,
+    "minimum_placements_per_axis": 10,
+    "selection_seed_offset": 17001
+  },
+  "execution": {
+    "resume_runs": true,
+    "continue_on_error": false,
+    "use_sample_parfor": true,
+    "maximum_supplementary_realizations_per_condition": 6
+  },
+  "splits": {
+    "in_domain_seed": 8201,
+    "fold_seed": 8301,
+    "fold_count": 5,
+    "train_fraction": 0.70,
+    "validation_fraction": 0.15,
+    "test_fraction": 0.15,
+    "held_out_cs_m_s": 3.0,
+    "held_out_frequency_hz": 400
+  },
+  "training": {
+    "model_id": "homogeneous_cartesian_q0_bagged_v1",
+    "random_seed": 8401,
+    "num_learning_cycles": 160,
+    "min_leaf_size": 8,
+    "use_parallel": false
+  }
+}
