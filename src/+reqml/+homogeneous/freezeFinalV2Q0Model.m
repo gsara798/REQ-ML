@@ -1,0 +1,66 @@
+function result=freezeFinalV2Q0Model(config_file,options)
+%FREEZEFINALV2Q0MODEL Fit the fixed Q0 model on all approved v2 examples.
+arguments
+    config_file {mustBeTextScalar}
+    options.DatasetPath {mustBeTextScalar} = ""
+    options.RequireDevelopmentGates (1,1) logical = true
+end
+config_file=string(config_file); config=jsondecode(fileread(config_file));
+root=string(fileparts(fileparts(fileparts(fileparts(mfilename("fullpath"))))));
+output_root=reqml.config.resolveWorkspacePath(string(config.paths.output_root),RepositoryRoot=root);
+if options.RequireDevelopmentGates
+    gate_file=fullfile(output_root,"generalization","development_gates.csv");
+    if ~isfile(gate_file), error("reqml:MissingV2DevelopmentGates","Missing %s",gate_file); end
+    gates=readtable(gate_file,TextType="string");
+    if ~all(gates.pass), error("reqml:V2DevelopmentGateFailed","Cannot freeze final Q0 while development gates fail."); end
+end
+dataset_path=string(options.DatasetPath); if strlength(dataset_path)==0, dataset_path=fullfile(output_root,"dataset","examples.mat"); end
+loaded=load(dataset_path,"examples"); examples=loaded.examples;
+registry=reqml.training.q0_predictor_registry(); names=registry.q_spectrum_predictors;
+contract=reqml.training.validate_predictor_contract(examples,names,registry);
+if ~contract.valid, error("reqml:InvalidHomogeneousQ0PredictorContract","%s",contract.summary); end
+[X,metadata]=reqml.training.build_numeric_predictor_matrix(examples,names);
+q_true=double(examples.q_target_from_center_truth);
+spec=struct("id",string(config.training.model_id)+"_final_frozen", ...
+    "type","bagged_trees","num_learning_cycles",double(config.training.num_learning_cycles), ...
+    "min_leaf_size",double(config.training.min_leaf_size), ...
+    "use_parallel",logical(config.training.use_parallel), ...
+    "random_seed",double(config.training.random_seed));
+model=reqml.training.fit_regression_model(X,q_true,true(height(examples),1),spec);
+q_pred=reqml.training.predict_regression_model(model,X,ClipRange=[.001 .999]);
+sws=reqml.evaluation.convert_q_predictions_to_sws(examples,q_pred);
+diagnostics=table(double(examples.REQ_M),double(examples.truth_cs_center_m_s), ...
+    q_true,q_pred,q_pred-q_true,sws.cs_pred_m_s,sws.cs_error_percent, ...
+    sws.cs_absolute_error_percent,VariableNames=["REQ_M","cs_true_m_s", ...
+    "q_true","q_pred","q_error","cs_pred_m_s","cs_error_percent","cs_absolute_error_percent"]);
+metrics=reqml.homogeneous.summarizeQ0ByGroup( ...
+    add_metric_contract(diagnostics),["REQ_M"]);
+output=fullfile(output_root,"training","final_frozen_q0_v2"); if ~isfolder(output), mkdir(output); end
+model_metadata=struct("model_id",spec.id,"target_name","q_target_from_center_truth", ...
+    "predictor_names",names,"predictor_count",metadata.predictor_count,"spec",spec, ...
+    "dataset_path",dataset_path,"training_scope","all approved v2 homogeneous examples", ...
+    "external_validation_seen",false); %#ok<NASGU>
+predictor_names=names; save(fullfile(output,"model_bundle.mat"), ...
+    "model","model_metadata","predictor_names","-v7.3");
+writetable(metrics,fullfile(output,"training_metrics_by_M.csv"));
+manifest=struct("schema_name","reqml_homogeneous_q0_v2_final_freeze", ...
+    "schema_version","2.0","model_id",spec.id,"dataset_path",dataset_path, ...
+    "example_count",height(examples),"REQ_M_values",sort(unique(double(examples.REQ_M))), ...
+    "predictor_names",names,"model_spec",spec,"external_validation_seen",false, ...
+    "git_head",git_head(root),"created_utc",string(datetime("now","TimeZone","UTC")));
+write_json(fullfile(output,"training_manifest.json"),manifest);
+result=struct("model",model,"metrics",metrics,"model_bundle", ...
+    fullfile(output,"model_bundle.mat"),"manifest",manifest);
+end
+
+function p=add_metric_contract(d)
+p=d; p.partition=repmat("all_training",height(d),1); p.cs_error_m_s= ...
+    p.cs_pred_m_s-p.cs_true_m_s; p.sws_valid=isfinite(p.cs_pred_m_s);
+end
+function value=git_head(root)
+[status,text]=system(sprintf('git -C "%s" rev-parse HEAD',root)); if status==0, value=strtrim(string(text)); else, value="unknown"; end
+end
+function write_json(path,value)
+fid=fopen(path,"w"); if fid<0, error("reqml:CannotWriteV2FinalModel","Cannot write %s",path); end
+cleanup=onCleanup(@() fclose(fid)); fprintf(fid,"%s\n",jsonencode(value,PrettyPrint=true));
+end

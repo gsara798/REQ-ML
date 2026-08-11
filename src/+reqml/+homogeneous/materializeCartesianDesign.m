@@ -147,7 +147,10 @@ end
 names=string({config.field_regimes.name});
 if isequal(M_values,[2;3])
     expected=reqml.homogeneous.buildAngularFieldFamilyV2();
-    valid_fields=isequal(names(:),expected.name);
+    allow_subset=isfield(config.design,"allow_angular_subset") && ...
+        logical(config.design.allow_angular_subset);
+    valid_fields=isequal(names(:),expected.name) || ...
+        (allow_subset && all(ismember(names(:),expected.name)));
 else
     valid_fields=isequal(names(:),["single";"directional";"intermediate";"diffuse"]);
 end
