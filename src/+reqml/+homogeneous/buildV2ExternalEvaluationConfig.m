@@ -19,7 +19,9 @@ for i=1:numel(master.campaigns)
     runs=readtable(csv,TextType="string",VariableNamingRule="preserve");
     complete=ismember(runs.status,["completed","skipped_completed"]);
     runs=runs(complete,:);
-    if height(runs)~=double(spec.expected_runs) || any(~runs.valid)
+    valid=double(runs.valid);
+    if height(runs)~=double(spec.expected_runs) || ...
+            any(~isfinite(valid)) || any(valid~=1)
         error("reqml:IncompleteV2ExternalCampaign", ...
             "%s has %d valid completed runs; expected %d.", ...
             spec.campaign_name,height(runs),double(spec.expected_runs));
