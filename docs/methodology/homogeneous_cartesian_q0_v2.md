@@ -109,10 +109,22 @@ controls (1.566 GB conservative estimate). A true 52-mm sphere requires
 conservative estimate is 7.339 GB. Every k-Wave campaign is dry-run validated
 before solver execution.
 
-External maps are extracted densely (`StepX=StepZ=1`). Primary quantitative
-metrics use the M-specific stride and do not treat overlapping dense patches
-as independent. Inclusion ROIs are `background_far`, `inclusion_core`, and
+External maps use configurable spatial sampling. The final matrix defaults to
+dense extraction (`StepX=StepZ=1`); explicitly partial exploratory analyses
+may use a coarser `map_step_px` for faster visualization. In either case,
+primary quantitative metrics are extracted separately at the exact M-specific
+stride and do not treat overlapping map patches as independent. Per-case CSVs
+may be resumed only when the evaluation config explicitly enables
+`resume_case_predictions`. Inclusion ROIs are `background_far`, `inclusion_core`, and
 `interface_band`; bilayer ROIs are `layer_1_core`, `layer_2_core`, and
 `interface_band`. A patch is an interface patch exactly when its full truth
 support contains more than one material. Truth purity is diagnostic only and
 is never supplied to Q0.
+
+The strict external-config builder still requires the complete 24-case matrix.
+Its explicit `available` mode instead includes only valid completed campaign
+runs, records expected/included/omitted counts and a campaign-level audit, and
+marks the result as partial. A zero or degenerate external spectrum produces
+non-finite features and an auditable non-evaluable patch; it is never replaced
+by a synthetic prediction. `external_validity_metrics.csv` reports these
+fractions alongside the transfer metrics and map figures.

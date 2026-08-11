@@ -21,6 +21,33 @@ verifyError(testCase,@() reqml.homogeneous.buildV2ExternalEvaluationConfig(maste
     "reqml:MissingV2ExternalCampaign");
 end
 
+function testAvailableModeIncludesOnlyValidCompletedRuns(testCase)
+[master,framework,cleanup]=fixture(); %#ok<ASGLU>
+c=jsondecode(fileread(master));
+missing=fullfile(framework,"outputs","campaigns","scientific","reqml_q0_v2", ...
+    string(c.campaigns(6).campaign_name),"campaign_runs.csv");
+delete(missing);
+ledger=fullfile(framework,"outputs","campaigns","scientific","reqml_q0_v2", ...
+    string(c.campaigns(5).campaign_name),"campaign_runs.csv");
+r=readtable(ledger,TextType="string"); r.status(:)="running"; r.valid(:)=false; writetable(r,ledger);
+result=reqml.homogeneous.buildV2ExternalEvaluationConfig(master, ...
+    CompletionMode="available",EvaluationId="partial_available", ...
+    OutputRoot="${REPOSITORY_ROOT}/partial",MapStepPixels=4,ResumeCasePredictions=true, ...
+    OutputFile=fullfile(framework,"partial.json"));
+verifyEqual(testCase,height(result.cases),4);
+verifyTrue(testCase,result.config.partial_result);
+verifyEqual(testCase,string(result.config.evaluation_scope),"available");
+verifyEqual(testCase,double(result.config.expected_case_count),6);
+verifyEqual(testCase,double(result.config.omitted_expected_case_count),2);
+verifyEqual(testCase,string(result.config.evaluation_id),"partial_available");
+verifyEqual(testCase,string(result.config.output_root),"${REPOSITORY_ROOT}/partial");
+verifyEqual(testCase,double(result.config.feature_config.map_step_px),4);
+verifyTrue(testCase,result.config.feature_config.resume_case_predictions);
+states=string({result.config.campaign_audit.state});
+verifyTrue(testCase,any(states=="missing_ledger"));
+verifyTrue(testCase,any(states=="no_valid_completed_runs"));
+end
+
 function [master,framework,cleanup]=fixture()
 root=string(tempname); mkdir(root); framework=fullfile(root,"framework"); mkdir(framework);
 old=getenv("SWSIM_ROOT"); setenv("SWSIM_ROOT",framework);

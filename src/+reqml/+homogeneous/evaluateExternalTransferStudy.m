@@ -30,36 +30,55 @@ if ~isfolder(table_root), mkdir(table_root); end
 if ~isfolder(figure_root), mkdir(figure_root); end
 
 prediction_parts=cell(numel(config.cases)*numel(M_values),1); part_index=0;
+if isfield(config.feature_config,"map_step_px"), map_step=double(config.feature_config.map_step_px); else, map_step=1; end
+resume_cases=isfield(config.feature_config,"resume_case_predictions") && logical(config.feature_config.resume_case_predictions);
+resumed_part_count=0;
 for i=1:numel(config.cases)
     c=config.cases(i); label=string(c.label); sample_file=string(c.sample_file);
     data=reqml.io.load_wavefield_sample(sample_file);
     for M=M_values.'
-    feat_cfg=reqml.config.default_feature_config("M",M, ...
-        "cs_guess",double(config.feature_config.cs_guess_m_s));
-    extracted=reqml.datasets.extract_examples_from_sample(data,feat_cfg, ...
-        DatasetId=string(config.evaluation_id),SampleId=label+"_M"+M,StepX=1,StepZ=1, ...
-        StoreReqCurves=false,UseWindowParfor=logical(config.feature_config.use_window_parfor));
-    examples=extracted.examples;
-    examples.campaign_frequency_hz=repmat(double(data.frequency_hz),height(examples),1);
-    contract=reqml.training.validate_predictor_contract(examples,predictor_names, ...
-        reqml.training.q0_predictor_registry());
-    if ~contract.valid, error("reqml:InvalidExternalQ0PredictorContract","%s",contract.summary); end
-    X=reqml.training.build_numeric_predictor_matrix(examples,predictor_names);
-    q_pred=reqml.training.predict_regression_model(loaded.model,X,ClipRange=[.001 .999]);
-    sws=reqml.evaluation.convert_q_predictions_to_sws(examples,q_pred);
+    stem=label+"_M"+M; case_table=fullfile(table_root,stem+"_dense_predictions.csv");
+    if resume_cases && isfile(case_table)
+        predictions=readtable(case_table,TextType="string");
+        required=["case_label","REQ_M","sampling_mode","sws_valid"];
+        if all(ismember(required,string(predictions.Properties.VariableNames))) && ...
+                all(predictions.case_label==label) && all(predictions.REQ_M==M) && ...
+                any(predictions.sampling_mode=="stride_matched") && ...
+                any(ismember(predictions.sampling_mode,["dense_map","spatial_map"]))
+            part_index=part_index+1; prediction_parts{part_index}=predictions;
+            figure_base=fullfile(figure_root,stem);
+            if ~isfile(figure_base+".png") || ~isfile(figure_base+".pdf")
+                make_case_figure(predictions,figure_base,string(c.geometry));
+            end
+            resumed_part_count=resumed_part_count+1;
+            fprintf("%s M=%d: resumed validated case predictions\n",label,M);
+            continue
+        end
+    end
     geometry=reqml.homogeneous.computePatchGeometry(double(data.frequency_hz), ...
         double(data.dx_m),double(data.dz_m),M=M, ...
         CsGuessMPerS=double(config.feature_config.cs_guess_m_s));
-    predictions=make_predictions(examples,q_pred,sws,c,sample_file,geometry,M);
+    map_mode="dense_map"; if map_step>1, map_mode="spatial_map"; end
+    map_predictions=predict_at_step(data,config,c,label,sample_file,M,map_step,map_mode, ...
+        predictor_names,loaded.model,geometry);
+    if map_step==1
+        stride=geometry.stride_x_px;
+        matched=mod(map_predictions.cx-min(map_predictions.cx),stride)==0 & ...
+            mod(map_predictions.cz-min(map_predictions.cz),stride)==0;
+        metric_predictions=map_predictions(matched,:); metric_predictions.sampling_mode(:)="stride_matched";
+    else
+        metric_predictions=predict_at_step(data,config,c,label,sample_file,M,geometry.stride_x_px, ...
+            "stride_matched",predictor_names,loaded.model,geometry);
+    end
+    predictions=[map_predictions;metric_predictions];
     predictions.roi=reqml.homogeneous.classifyExternalRoi(predictions.geometry, ...
         predictions.material_id_center,predictions.truth_material_purity, ...
         predictions.cx,predictions.cz,double(data.dx_m),double(data.dz_m));
     part_index=part_index+1; prediction_parts{part_index}=predictions;
-    stem=label+"_M"+M;
-    writetable(predictions,fullfile(table_root,stem+"_dense_predictions.csv"));
+    writetable(predictions,case_table);
     make_case_figure(predictions,fullfile(figure_root,stem),string(c.geometry));
     fprintf("%s M=%d: %d dense, %d stride-matched patches\n",label,M, ...
-        nnz(predictions.sampling_mode=="dense_map"), ...
+        nnz(ismember(predictions.sampling_mode,["dense_map","spatial_map"])), ...
         nnz(predictions.sampling_mode=="stride_matched"));
     end
 end
@@ -74,33 +93,139 @@ purity_metrics=reqml.homogeneous.summarizeExternalPredictions( ...
     ["backend","geometry","field_regime","REQ_M","case_label","sampling_mode","purity_bin"]);
 field_metrics=reqml.homogeneous.summarizeExternalPredictions(predictions, ...
     ["backend","geometry","field_regime","REQ_M","sampling_mode"]);
+validity_metrics=summarize_validity(predictions, ...
+    ["backend","geometry","field_regime","REQ_M","case_label","sampling_mode"]);
 writetable(metrics,fullfile(table_root,"external_global_metrics.csv"));
 writetable(roi_metrics,fullfile(table_root,"external_roi_metrics.csv"));
 writetable(purity_metrics,fullfile(table_root,"external_purity_metrics.csv"));
 writetable(field_metrics,fullfile(table_root,"external_field_metrics.csv"));
+writetable(validity_metrics,fullfile(table_root,"external_validity_metrics.csv"));
 save(fullfile(output_root,"external_predictions.mat"),"predictions","-v7.3");
 make_field_figure(field_metrics,fullfile(figure_root,"external_mape_by_field"));
+make_summary_figure(field_metrics,roi_metrics,fullfile(figure_root,"external_analysis_summary"));
+make_validity_figure(validity_metrics,fullfile(figure_root,"external_invalid_patch_fraction"));
 manifest=struct("schema_name","reqml_external_q0_transfer_study","schema_version","1.0", ...
     "evaluation_id",string(config.evaluation_id),"source_config",config_file, ...
     "model_bundle",model_file,"model_metadata",loaded.model_metadata, ...
     "REQ_M_values",M_values, ...
     "case_count",numel(config.cases), ...
+    "evaluation_scope",optional_string(config,"evaluation_scope","unspecified"), ...
+    "partial_result",optional_logical(config,"partial_result",false), ...
+    "expected_case_count",optional_double(config,"expected_case_count",numel(config.cases)), ...
     "dense_patch_count",nnz(predictions.sampling_mode=="dense_map"), ...
+    "spatial_map_patch_count",nnz(predictions.sampling_mode=="spatial_map"), ...
+    "map_step_px",map_step, ...
     "stride_patch_count",nnz(predictions.sampling_mode=="stride_matched"), ...
+    "invalid_prediction_count",nnz(~predictions.sws_valid), ...
+    "resumed_case_M_part_count",resumed_part_count, ...
     "dense_patch_independence_note","Dense rows overlap and are not independent samples.", ...
     "git_head",git_head(repository_root),"created_utc",string(datetime("now","TimeZone","UTC")));
 write_json(fullfile(output_root,"external_manifest.json"),manifest);
 result=struct("metrics",metrics,"roi_metrics",roi_metrics, ...
     "purity_metrics",purity_metrics,"field_metrics",field_metrics, ...
+    "validity_metrics",validity_metrics, ...
     "output_root",output_root);
 end
 
-function p=make_predictions(e,q_pred,sws,c,sample_file,g,M)
+function p=predict_at_step(data,config,c,label,sample_file,M,step,mode,predictor_names,model,g)
+feat_cfg=reqml.config.default_feature_config("M",M, ...
+    "cs_guess",double(config.feature_config.cs_guess_m_s));
+extracted=reqml.datasets.extract_examples_from_sample(data,feat_cfg, ...
+    DatasetId=string(config.evaluation_id),SampleId=label+"_M"+M+"_"+mode, ...
+    StepX=step,StepZ=step,StoreReqCurves=false, ...
+    UseWindowParfor=logical(config.feature_config.use_window_parfor));
+examples=extracted.examples;
+examples.campaign_frequency_hz=repmat(double(data.frequency_hz),height(examples),1);
+contract=reqml.training.validate_predictor_contract(examples,predictor_names, ...
+    reqml.training.q0_predictor_registry());
+structural_valid=isempty(contract.duplicate_names) && isempty(contract.missing_names) && ...
+    isempty(contract.forbidden_names) && isempty(contract.nonnumeric_names) && ...
+    isempty(contract.invalid_shape_names);
+if ~structural_valid
+    error("reqml:InvalidExternalQ0PredictorContract","%s",contract.summary);
+end
+X=nan(height(examples),numel(predictor_names));
+for predictor_index=1:numel(predictor_names)
+    X(:,predictor_index)=double(examples.(predictor_names(predictor_index)));
+end
+valid_predictors=all(isfinite(X),2); q_pred=nan(height(examples),1);
+if any(valid_predictors)
+    q_pred(valid_predictors)=reqml.training.predict_regression_model( ...
+        model,X(valid_predictors,:),ClipRange=[.001 .999]);
+end
+sws=reqml.evaluation.convert_q_predictions_to_sws(examples,q_pred);
+p=make_predictions(examples,q_pred,sws,c,sample_file,g,M,mode);
+end
+
+function summary=summarize_validity(p,groups)
+[g,values]=findgroups(p(:,groups)); summary=values;
+summary.total_patch_count=splitapply(@numel,p.sws_valid,g);
+summary.valid_patch_count=splitapply(@nnz,p.sws_valid,g);
+summary.invalid_patch_count=summary.total_patch_count-summary.valid_patch_count;
+summary.invalid_patch_fraction=summary.invalid_patch_count./summary.total_patch_count;
+end
+
+function make_summary_figure(field,roi,path_base)
+d=field(field.sampling_mode=="stride_matched",:);
+fig=figure("Visible","off","Color","w","Position",[100 100 1250 760]);
+tiledlayout(2,2,"TileSpacing","compact","Padding","compact");
+nexttile; grouped_bar(d,"backend","SWS MAPE (%)","Backend");
+nexttile; grouped_bar(d,"geometry","SWS MAPE (%)","Geometry");
+nexttile; grouped_bar(d,"field_regime","SWS MAPE (%)","Angular regime");
+nexttile;
+r=roi(roi.sampling_mode=="stride_matched",:);
+if isempty(r)
+    axis off; text(.5,.5,"No heterogeneous ROI cases","HorizontalAlignment","center");
+else
+    grouped_bar(r,"roi","SWS MAPE (%)","Heterogeneous ROI");
+end
+sgtitle("External frozen-Q0 analysis (stride matched)");
+exportgraphics(fig,path_base+".png","Resolution",300);
+exportgraphics(fig,path_base+".pdf","ContentType","vector"); close(fig);
+end
+
+function grouped_bar(t,name,ylabel_text,title_text)
+groups=unique(string(t.(name)),"stable"); M=sort(unique(t.REQ_M)); values=nan(numel(groups),numel(M));
+for i=1:numel(groups)
+    for j=1:numel(M)
+        q=t(string(t.(name))==groups(i) & t.REQ_M==M(j),:);
+        if ~isempty(q), values(i,j)=sum(q.sws_mape.*q.patch_count)/sum(q.patch_count); end
+    end
+end
+labels=replace(groups,"_"," ");
+bar(categorical(labels,labels),values); ylabel(ylabel_text); title(title_text); grid on;
+set(gca,"TickLabelInterpreter","none");
+legend("M="+string(M),"Location","best");
+end
+
+function make_validity_figure(t,path_base)
+d=t(ismember(t.sampling_mode,["dense_map","spatial_map"]),:);
+labels=d.case_label+" M="+string(d.REQ_M); [labels,order]=sort(labels); d=d(order,:);
+fig=figure("Visible","off","Color","w","Position",[100 100 1300 700]);
+barh(categorical(replace(labels,"_"," "),replace(labels,"_"," ")),100*d.invalid_patch_fraction);
+xlabel("Invalid patch fraction (%)"); ylabel("External case");
+title("Non-evaluable external patches (spatial maps)"); grid on;
+set(gca,"TickLabelInterpreter","none");
+exportgraphics(fig,path_base+".png","Resolution",300);
+exportgraphics(fig,path_base+".pdf","ContentType","vector"); close(fig);
+end
+
+function value=optional_string(s,name,fallback)
+if isfield(s,name), value=string(s.(name)); else, value=string(fallback); end
+end
+
+function value=optional_logical(s,name,fallback)
+if isfield(s,name), value=logical(s.(name)); else, value=logical(fallback); end
+end
+
+function value=optional_double(s,name,fallback)
+if isfield(s,name), value=double(s.(name)); else, value=double(fallback); end
+end
+
+function p=make_predictions(e,q_pred,sws,c,sample_file,g,M,mode)
 n=height(e); q_true=double(e.q_target_from_center_truth);
 stride=max(g.stride_x_px,g.stride_z_px);
-matched=mod(double(e.cx)-min(double(e.cx)),stride)==0 & ...
-    mod(double(e.cz)-min(double(e.cz)),stride)==0;
-sampling=repmat("dense_map",n,1); sampling(matched)="stride_matched";
+sampling=repmat(string(mode),n,1);
 purity=double(e.truth_material_purity);
 purity_bin=repmat("<0.7",n,1); purity_bin(purity>=.7)="0.7-0.9";
 purity_bin(purity>=.9)="0.9-0.98"; purity_bin(purity>=.98)="0.98-1";
@@ -118,13 +243,10 @@ p=table(repmat(string(c.label),n,1),repmat(string(c.backend),n,1), ...
     "material_id_center","truth_material_purity","purity_bin","q_true","q_pred","q_error", ...
     "cs_true_m_s","cs_pred_m_s","cs_error_m_s","cs_error_percent", ...
     "cs_absolute_error_percent","sws_valid","patch_width_px","stride_px"]);
-% Duplicate only matched rows, retaining dense rows for maps and explicitly
-% labelling the statistically less-correlated metric subset.
-q=p(matched,:); q.sampling_mode(:)="stride_matched"; p.sampling_mode(:)="dense_map"; p=[p;q];
 end
 
 function make_case_figure(p,path_base,geometry)
-d=p(p.sampling_mode=="dense_map",:); iz=unique(d.map_iz); ix=unique(d.map_ix);
+d=p(ismember(p.sampling_mode,["dense_map","spatial_map"]),:); iz=unique(d.map_iz); ix=unique(d.map_ix);
 vars=["cs_true_m_s","cs_pred_m_s","cs_error_percent","cs_absolute_error_percent","q_pred","truth_material_purity"];
 titles=["Ground-truth SWS","Q0-predicted SWS","Signed error (%)","Absolute error (%)","Predicted q","Truth material purity"];
 if geometry=="homogeneous", vars=vars([2 3]); titles=titles([2 3]); end
