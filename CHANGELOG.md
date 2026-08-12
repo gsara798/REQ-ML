@@ -1,42 +1,29 @@
 # Changelog
 
-All notable public changes to Adaptive REQ will be documented in this file.
-
-The format follows the principles of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and the project intends to use semantic versioning after the first stable public
-API is defined.
+All notable public REQ-ML changes are documented here. The project follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semantic
+versioning for its public software interface.
 
 ## [Unreleased]
 
-### Added
-
-- Public-facing project documentation.
-- Apache License 2.0.
-- Citation metadata for scientific software.
-- Contribution and community guidelines.
-
-### Planned
-
-- Portable end-to-end REQ example using a small synthetic wavefield.
-- Documented MATLAB and toolbox requirements.
-- Unit tests for radial-spectrum and cumulative-energy calculations.
-- Regression tests for representative adaptive-REQ workflows.
-- Continuous integration for core numerical functions.
-- Versioned public model and configuration metadata.
-
-## [0.1.0] - YYYY-MM-DD
+## [0.1.0] - Unreleased
 
 ### Added
 
-- Initial public research release.
-- Reusable MATLAB functions under `src/`.
-- Experiment runners and analysis scripts under `experiments/`.
-- Versioned experiment configurations under `configs/`.
-- Documentation for adaptive REQ baselines and Eikonal transfer validation.
+- Controlled homogeneous Q0 baseline with dense SWS and angular coverage.
+- Frozen model support for REQ window multipliers M=2 and M=3.
+- External homogeneous projected-3D Eikonal and k-Wave validation.
+- High-level `reqml.predictSWS` prediction API.
+- Canonical homogeneous and circular-inclusion examples.
+- Model-distribution metadata with bundle checksum and provenance.
+
+### Changed
+
+- User documentation now presents the current Q0 workflow instead of adaptive
+  experiment history.
+- Obsolete v1 user entry points are preserved under `archive/legacy_v1/`.
 
 ### Notes
 
-- This release should be created only after confirming that the public example
-  runs from a clean clone and that its required dependencies are documented.
-- Large generated outputs, simulation caches, and trained model artifacts are
-  not included in the repository.
+- Large model bundles and generated scientific outputs are not committed.
+- Tag and release publication remain manual steps after review.
