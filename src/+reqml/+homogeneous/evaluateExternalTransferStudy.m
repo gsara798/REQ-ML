@@ -136,25 +136,9 @@ extracted=reqml.datasets.extract_examples_from_sample(data,feat_cfg, ...
     UseWindowParfor=logical(config.feature_config.use_window_parfor));
 examples=extracted.examples;
 examples.campaign_frequency_hz=repmat(double(data.frequency_hz),height(examples),1);
-contract=reqml.training.validate_predictor_contract(examples,predictor_names, ...
-    reqml.training.q0_predictor_registry());
-structural_valid=isempty(contract.duplicate_names) && isempty(contract.missing_names) && ...
-    isempty(contract.forbidden_names) && isempty(contract.nonnumeric_names) && ...
-    isempty(contract.invalid_shape_names);
-if ~structural_valid
-    error("reqml:InvalidExternalQ0PredictorContract","%s",contract.summary);
-end
-X=nan(height(examples),numel(predictor_names));
-for predictor_index=1:numel(predictor_names)
-    X(:,predictor_index)=double(examples.(predictor_names(predictor_index)));
-end
-valid_predictors=all(isfinite(X),2); q_pred=nan(height(examples),1);
-if any(valid_predictors)
-    q_pred(valid_predictors)=reqml.training.predict_regression_model( ...
-        model,X(valid_predictors,:),ClipRange=[.001 .999]);
-end
-sws=reqml.evaluation.convert_q_predictions_to_sws(examples,q_pred);
-p=make_predictions(examples,q_pred,sws,c,sample_file,g,M,mode);
+prediction=reqml.deployment.predictQ0Examples(examples,model,predictor_names);
+p=make_predictions(examples,prediction.q_pred,prediction.sws, ...
+    c,sample_file,g,M,mode);
 end
 
 function summary=summarize_validity(p,groups)
