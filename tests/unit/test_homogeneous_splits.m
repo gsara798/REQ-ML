@@ -40,7 +40,8 @@ verifyEqual(testCase,unique(conditions.frequency_hz(rows)),400);
 end
 function testCompleteHoldoutSpecificationCount(testCase)
 root=fileparts(fileparts(fileparts(mfilename("fullpath"))));
-config=jsondecode(fileread(fullfile(root,"configs","homogeneous", ...
+config=jsondecode(fileread(fullfile(root,"archive","legacy_v1", ...
+    "configs","homogeneous", ...
     "homogeneous_cartesian_q0_v1.json")));
 spec=reqml.homogeneous.buildHoldoutSpecifications(config);
 verifyEqual(testCase,height(spec),17);

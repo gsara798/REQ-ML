@@ -78,5 +78,6 @@ s=table(run_id,repmat(100,3,1),repmat(selected,3,1), ...
 end
 function path=config_path()
 root=fileparts(fileparts(fileparts(mfilename("fullpath"))));
-path=fullfile(root,"configs","homogeneous","homogeneous_cartesian_q0_v1.json");
+path=fullfile(root,"archive","legacy_v1","configs","homogeneous", ...
+    "homogeneous_cartesian_q0_v1.json");
 end

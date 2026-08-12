@@ -3,7 +3,7 @@ function result=auditAngularCoverageV2(options)
 
 arguments
     options.V1ConfigFile {mustBeTextScalar} = ...
-        "${REPOSITORY_ROOT}/configs/homogeneous/homogeneous_cartesian_q0_v1.json"
+        "${REPOSITORY_ROOT}/archive/legacy_v1/configs/homogeneous/homogeneous_cartesian_q0_v1.json"
     options.V1CampaignRunsCsv {mustBeTextScalar} = ...
         "${SWSIM_ROOT}/outputs/campaigns/homogeneous_cartesian_q0_v1/campaign_runs.csv"
     options.OutputDirectory {mustBeTextScalar} = ""

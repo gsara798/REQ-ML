@@ -69,6 +69,6 @@ end
 function cfg=load_config(), cfg=jsondecode(fileread(config_path())); end
 function path=config_path()
 root=fileparts(fileparts(fileparts(mfilename("fullpath"))));
-path=fullfile(root,"configs","homogeneous", ...
+path=fullfile(root,"archive","legacy_v1","configs","homogeneous", ...
     "homogeneous_cartesian_q0_v1.json");
 end

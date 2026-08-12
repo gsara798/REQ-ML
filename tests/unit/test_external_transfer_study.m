@@ -28,7 +28,8 @@ verifyEqual(testCase,roi,["layer_1_core";"layer_2_core";"interface_band"]);
 end
 
 function testPortableExternalTransferConfig(testCase)
-path=fullfile(testCase.TestData.repo,"configs","homogeneous", ...
+path=fullfile(testCase.TestData.repo,"archive","legacy_v1", ...
+    "configs","homogeneous", ...
     "homogeneous_q0_external_transfer_v1.json");
 raw=fileread(path); config=jsondecode(raw);
 verifyFalse(testCase,contains(raw,"/Users/sara"));
