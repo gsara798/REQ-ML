@@ -142,7 +142,7 @@ end
 M_values=reqml.homogeneous.resolveReqMValues(config);
 if double(config.req.cs_guess_m_s)~=3
     error("reqml:InvalidHomogeneousQ0ReqContract", ...
-        "The controlled baseline requires M=2 and cs_guess_m_s=3.");
+        "The controlled baseline supports M=2 and M=3 and requires cs_guess_m_s=3.");
 end
 names=string({config.field_regimes.name});
 if isequal(M_values,[2;3])

@@ -44,6 +44,17 @@ verifyEqual(testCase,double(m.run_count),2730);
 verifyEqual(testCase,numel(r.campaign.runs),2730);
 end
 
+function testInvalidCsGuessMessageDescribesDualMContract(testCase)
+c=load_config(); c.req.cs_guess_m_s=2.5;
+try
+    reqml.homogeneous.materializeCartesianDesign(c);
+    verifyFail(testCase,"Expected invalid REQ contract error.");
+catch exception
+    verifyEqual(testCase,exception.identifier,'reqml:InvalidHomogeneousQ0ReqContract');
+    verifySubstring(testCase,exception.message,"supports M=2 and M=3");
+end
+end
+
 function c=load_config, c=jsondecode(fileread(config_path())); end
 function path=config_path
 root=string(fileparts(fileparts(fileparts(mfilename("fullpath")))));
