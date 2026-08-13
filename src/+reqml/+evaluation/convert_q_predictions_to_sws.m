@@ -25,14 +25,13 @@ if numel(q_pred) ~= n
 end
 
 required = [
-    options.TruthColumn
     options.FrequencyColumn
     options.MappingColumn
     ];
 
-missing = setdiff( ...
-    required, ...
-    string(examples.Properties.VariableNames));
+names = string(examples.Properties.VariableNames);
+
+missing = setdiff(required, names);
 
 if ~isempty(missing)
     error("reqml:MissingSwsConversionVariable", ...
@@ -43,8 +42,14 @@ end
 frequency_hz = double( ...
     examples.(char(options.FrequencyColumn)));
 
-cs_true_m_s = double( ...
-    examples.(char(options.TruthColumn)));
+has_truth = ismember(options.TruthColumn, names);
+
+if has_truth
+    cs_true_m_s = double( ...
+        examples.(char(options.TruthColumn)));
+else
+    cs_true_m_s = nan(height(examples), 1);
+end
 
 mapping_values = examples.(char(options.MappingColumn));
 
@@ -66,18 +71,33 @@ end
 cs_pred_m_s = ...
     2*pi*frequency_hz ./ k_pred_rad_m;
 
-valid = ...
+prediction_valid = ...
     isfinite(q_pred) & ...
     isfinite(k_pred_rad_m) & ...
     k_pred_rad_m > 0 & ...
     isfinite(cs_pred_m_s) & ...
-    cs_pred_m_s > 0 & ...
-    isfinite(cs_true_m_s) & ...
-    cs_true_m_s > 0;
+    cs_pred_m_s > 0;
 
-cs_error_m_s = cs_pred_m_s - cs_true_m_s;
-cs_error_percent = 100 * cs_error_m_s ./ cs_true_m_s;
-cs_absolute_error_percent = abs(cs_error_percent);
+if has_truth
+    truth_valid = ...
+        isfinite(cs_true_m_s) & ...
+        cs_true_m_s > 0;
+
+    valid = prediction_valid & truth_valid;
+
+    cs_error_m_s = cs_pred_m_s - cs_true_m_s;
+    cs_error_percent = 100 * cs_error_m_s ./ cs_true_m_s;
+    cs_absolute_error_percent = abs(cs_error_percent);
+
+    cs_error_m_s(~truth_valid) = NaN;
+    cs_error_percent(~truth_valid) = NaN;
+    cs_absolute_error_percent(~truth_valid) = NaN;
+else
+    valid = prediction_valid;
+    cs_error_m_s = nan(n, 1);
+    cs_error_percent = nan(n, 1);
+    cs_absolute_error_percent = nan(n, 1);
+end
 
 result = table();
 result.q_pred = double(q_pred(:));
@@ -89,5 +109,6 @@ result.cs_error_percent = cs_error_percent;
 result.cs_absolute_error_percent = ...
     cs_absolute_error_percent;
 result.sws_valid = valid;
+result.has_truth = repmat(has_truth, n, 1);
 
 end

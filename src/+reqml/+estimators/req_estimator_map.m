@@ -14,6 +14,8 @@ function OUT = req_estimator_map(Uxz, cfg, feat_cfg, varargin)
 %
 % Optional name-value inputs
 %   StepX/StepZ       : x/z stride in pixels. Default half window.
+%   CenterIndices     : optional N-by-2 matrix [cx, cz] of explicit centers.
+%                       When provided, StepX and StepZ are ignored.
 %   EdgeMode          : currently 'valid'. Full window must stay in field.
 %   QuantileMode      : 'local_req', 'fixed', 'provided', or
 %                       'theory_discrete'.
@@ -40,6 +42,9 @@ addParameter(p, 'StepX', [], ...
     @(x) isempty(x) || (isnumeric(x) && isscalar(x) && x >= 1));
 addParameter(p, 'StepZ', [], ...
     @(x) isempty(x) || (isnumeric(x) && isscalar(x) && x >= 1));
+addParameter(p, 'CenterIndices', [], ...
+    @(x) isempty(x) || ...
+    (isnumeric(x) && ismatrix(x) && size(x, 2) == 2));
 addParameter(p, 'EdgeMode', 'valid', @(x) ischar(x) || isstring(x));
 addParameter(p, 'QuantileMode', 'local_req', ...
     @(x) ischar(x) || isstring(x));
@@ -70,6 +75,7 @@ parse(p, Uxz, cfg, feat_cfg, varargin{:});
 stride_pixels = p.Results.StridePixels;
 step_x = p.Results.StepX;
 step_z = p.Results.StepZ;
+center_indices = double(p.Results.CenterIndices);
 edge_mode = lower(string(p.Results.EdgeMode));
 quantile_mode = lower(string(p.Results.QuantileMode));
 theory_field_type = string(p.Results.TheoryFieldType);
@@ -177,6 +183,145 @@ elseif quantile_mode == "theory_discrete"
     fixed_quantile = theory_out.q_th;
 elseif quantile_mode ~= "local_req"
     error('Unknown QuantileMode: %s', quantile_mode);
+end
+
+if ~isempty(center_indices)
+    if any(~isfinite(center_indices), "all") || ...
+            any(center_indices ~= round(center_indices), "all")
+        error("reqml:InvalidCenterIndices", ...
+            "CenterIndices must contain finite integer pixel indices.");
+    end
+
+    if size(unique(center_indices, "rows"), 1) ~= ...
+            size(center_indices, 1)
+        error("reqml:DuplicateCenterIndices", ...
+            "CenterIndices must not contain duplicate centers.");
+    end
+
+    center_x = center_indices(:, 1);
+    center_z = center_indices(:, 2);
+
+    valid_x = ...
+        center_x >= (1 + half_win) & ...
+        center_x <= (nx - half_win);
+
+    valid_z = ...
+        center_z >= (1 + half_win) & ...
+        center_z <= (nz - half_win);
+
+    if any(~valid_x | ~valid_z)
+        error("reqml:CenterIndicesOutOfBounds", ...
+            "Every explicit center must permit a complete valid %d-by-%d window.", ...
+            win_size, win_size);
+    end
+
+    nwin = size(center_indices, 1);
+
+    q_map = nan(nwin, 1);
+    k_map = nan(nwin, 1);
+    cs_map = nan(nwin, 1);
+    valid_map = false(nwin, 1);
+    req_mappings = cell(nwin, 1);
+
+    if store_req_curves
+        req_curves = cell(nwin, 1);
+    else
+        req_curves = {};
+    end
+
+    if return_features
+        features = cell(nwin, 1);
+    else
+        features = {};
+    end
+
+    if return_feature_table
+        row_cells = cell(nwin, 1);
+    else
+        row_cells = {};
+    end
+
+    for wi = 1:nwin
+        provided_q_i = NaN;
+
+        if quantile_mode == "provided"
+            if numel(provided_quantiles) ~= nwin
+                error("reqml:InvalidProvidedQuantiles", ...
+                    ["With CenterIndices, ProvidedQuantiles must ", ...
+                     "contain one value per center."]);
+            end
+            provided_q_i = provided_quantiles(wi);
+        end
+
+        [q_i, k_i, cs_i, valid_i, mapping_i, ...
+            curve_i, feature_i, row_i] = ...
+            process_req_window( ...
+            Uxz, cfg, req_cfg, feat_cfg, ...
+            wi, 1, wi, ...
+            center_x(wi), center_z(wi), ...
+            half_win, quantile_mode, ...
+            fixed_quantile, provided_q_i, ...
+            compute_features, return_features, ...
+            return_feature_table, store_req_curves, ...
+            reuse_req_spectrum_for_features);
+
+        q_map(wi) = q_i;
+        k_map(wi) = k_i;
+        cs_map(wi) = cs_i;
+        valid_map(wi) = valid_i;
+        req_mappings{wi} = mapping_i;
+
+        if store_req_curves
+            req_curves{wi} = curve_i;
+        end
+
+        if return_features
+            features{wi} = feature_i;
+        end
+
+        if return_feature_table
+            row_cells{wi} = row_i;
+        end
+    end
+
+    OUT = struct();
+    OUT.q_map = q_map;
+    OUT.k_map = k_map;
+    OUT.cs_map = cs_map;
+    OUT.valid_map = valid_map;
+    OUT.x_idx = center_x;
+    OUT.z_idx = center_z;
+    OUT.x_m = (center_x - 1) * cfg.dx;
+    OUT.z_m = (center_z - 1) * cfg.dz;
+    OUT.req_mappings = req_mappings;
+    OUT.req_curves = req_curves;
+    OUT.features = features;
+
+    if return_feature_table
+        OUT.feature_table = struct2table(vertcat(row_cells{:}));
+    else
+        OUT.feature_table = table();
+    end
+
+    OUT.win_size = win_size;
+    OUT.half_win = half_win;
+    OUT.stride_pixels = [];
+    OUT.step_x = [];
+    OUT.step_z = [];
+    OUT.center_indices = center_indices;
+    OUT.edge_mode = edge_mode;
+    OUT.quantile_mode = quantile_mode;
+
+    if quantile_mode == "theory_discrete"
+        OUT.theory = theory_out;
+    else
+        OUT.theory = struct();
+    end
+
+    OUT.cfg = cfg;
+    OUT.feat_cfg = feat_cfg;
+    OUT.req_cfg = req_cfg;
+    return
 end
 
 if use_window_parfor

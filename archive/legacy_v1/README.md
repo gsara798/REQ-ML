@@ -1,4 +1,4 @@
-# Legacy REQ-ML Workflows
+# Legacy pre-release REQ-ML Workflows
 
 This directory preserves the configuration files, experiment scripts, and
 study documentation that were active immediately before the reproducible
@@ -20,6 +20,13 @@ Historical scripts may depend on:
 - implicit assumptions;
 - simulation engines that have since moved to the shear-wave simulation
   framework.
+
+The archived `configs/homogeneous/` and `experiments/baselines/` entries are
+the obsolete v1 user-facing baseline. Their output identifiers and paths are
+preserved for provenance. The supported workflow now starts at the repository
+root with `reqml.predictSWS`, `examples/homogeneous/`, and
+`examples/inclusion/`. Reusable MATLAB functions remain under `src/` even when
+they originated during v1 development.
 
 ## How to use this archive
 

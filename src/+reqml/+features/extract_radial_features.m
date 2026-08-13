@@ -7,6 +7,11 @@ valid = isfinite(k) & isfinite(w) & (w > 0);
 k = k(valid);
 w = w(valid);
 
+if isempty(w) || sum(w) <= 0
+    radial = empty_radial(opt);
+    return;
+end
+
 w = w / (sum(w) + eps);
 
 [k_sorted, ord] = sort(k);
@@ -47,6 +52,7 @@ Prad_plot = weighted_histogram_1d(k, w, k_edges_plot);
 if opt.radial_smooth_bins > 1
     Prad_plot = movmean(Prad_plot, opt.radial_smooth_bins);
 end
+
 Prad_plot = Prad_plot / (sum(Prad_plot) + eps);
 
 Frad_plot = zeros(size(k_cent_plot));
@@ -88,6 +94,17 @@ radial.k_cent_plot = k_cent_plot;
 radial.Prad_plot   = Prad_plot;
 radial.Frad_plot   = Frad_plot;
 
+end
+
+function radial = empty_radial(opt)
+scalar_names={"radial_entropy","width_75_25_rel","width_90_50_rel", ...
+    "width_90_10_rel","lowk_frac_rel","midband_frac_rel","highk_frac_rel", ...
+    "k_q10","k_q25","k_q50","k_q75","k_q90","k_q995","iqr_k","k_plot_hi"};
+radial=struct();
+for i=1:numel(scalar_names), radial.(scalar_names{i})=NaN; end
+radial.k_cent_plot=nan(1,opt.Nrad_plot);
+radial.Prad_plot=nan(1,opt.Nrad_plot);
+radial.Frad_plot=nan(1,opt.Nrad_plot);
 end
 
 function xq = weighted_quantile_sorted(x_sorted, F_sorted, q)

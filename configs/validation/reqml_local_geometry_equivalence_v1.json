@@ -1,0 +1,37 @@
+{
+  "schema_name": "reqml_local_geometry_equivalence_config",
+  "schema_version": "1.0",
+  "description": "Local REQ feature equivalence controls kept separate from adaptive training coverage.",
+  "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework",
+  "analysis_patch": {
+    "center_indices_xz": [51, 51],
+    "window_wavelengths": 3,
+    "cs_guess_m_s": 3.0
+  },
+  "controls": [
+    {
+      "name": "true_homogeneous",
+      "geometry_family": "homogeneous",
+      "base_config": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json"
+    },
+    {
+      "name": "limiting_bilayer",
+      "geometry_family": "bilayer",
+      "base_config": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/bilayer_base.json",
+      "interface_policy": "one_grid_interval_outside_patch_support",
+      "target_purity": 1.0
+    },
+    {
+      "name": "large_local_planar_inclusion",
+      "geometry_family": "circular_inclusion",
+      "base_config": "/Users/sara/local/shear-wave-simulation-framework/configs/swsynth/scientific/reqml_eikonal_training_v1/circular_inclusion_base.json",
+      "radius_m": 0.02,
+      "purpose": "validation_and_ood_only"
+    }
+  ],
+  "comparison": {
+    "outputs": ["radial_spectral_features", "angular_spectral_features", "q_target_from_center_truth"],
+    "replicate_seeds": [81001, 81002, 81003],
+    "interpretation": "Compare within expected numerical variability; do not add inclusion or explicit homogeneous controls to adaptive grid filling."
+  }
+}

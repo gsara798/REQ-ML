@@ -16,7 +16,7 @@ addpath(fullfile(root, "src"));
 end
 
 
-function testGroupsByFullFourDimensionalCell(testCase)
+function testGroupsByFullFiveDimensionalCell(testCase)
 
 assigned = make_assigned_examples();
 
@@ -30,9 +30,9 @@ verifyEqual(testCase, height(summary), 3);
 verifyEqual(testCase, ...
     summary.cell_key, ...
     [ ...
-        "s01_f01_p01_d01"
-        "s01_f02_p01_d01"
-        "s02_f01_p01_d01"
+        "s01_f01_p01_d01_g01"
+        "s01_f02_p01_d01_g02"
+        "s02_f01_p01_d01_g03"
     ]);
 
 verifyEqual(testCase, ...
@@ -61,6 +61,14 @@ verifyEqual(testCase, ...
         "[199,250)"
         "[250,350)"
         "[199,250)"
+    ]);
+
+verifyEqual(testCase, ...
+    summary.discretization_label, ...
+    [ ...
+        "dx=0.00025,dz=0.00025"
+        "dx=0.0004,dz=0.0004"
+        "dx=0.0005,dz=0.0005"
     ]);
 
 end
@@ -103,11 +111,13 @@ verifyEqual(testCase, ...
         "frequency_bin"
         "purity_bin"
         "diffusivity_bin"
+        "discretization_bin"
         "cell_key"
         "sws_label"
         "frequency_label"
         "purity_label"
         "diffusivity_label"
+        "discretization_label"
         "example_count"
         "independent_run_count"
     ]');
@@ -131,6 +141,9 @@ assigned.coverage_purity_bin = ...
 assigned.coverage_diffusivity_bin = ...
     [1; 1; 1; 1; 1];
 
+assigned.coverage_discretization_bin = ...
+    [1; 1; 2; 3; 3];
+
 assigned.coverage_sws_label = [
     "[1.5,2)"
     "[1.5,2)"
@@ -152,6 +165,14 @@ assigned.coverage_purity_label = ...
 
 assigned.coverage_diffusivity_label = ...
     repmat("[0,0.01)", 5, 1);
+
+assigned.coverage_discretization_label = [
+    "dx=0.00025,dz=0.00025"
+    "dx=0.00025,dz=0.00025"
+    "dx=0.0004,dz=0.0004"
+    "dx=0.0005,dz=0.0005"
+    "dx=0.0005,dz=0.0005"
+    ];
 
 assigned.coverage_valid = true(5,1);
 

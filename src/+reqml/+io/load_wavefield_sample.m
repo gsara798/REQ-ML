@@ -22,7 +22,7 @@ end
 sample = loaded.wavefield_sample;
 
 required_top = ["schema_name","schema_version","generator", ...
-    "coordinates","wavefield","truth","validation","provenance"];
+    "coordinates","wavefield","validation","provenance"];
 
 for name = required_top
     require_field(sample, name, "sample", ...
@@ -90,41 +90,64 @@ if ~isscalar(frequency_hz) || ~isfinite(frequency_hz) || frequency_hz <= 0
         "wavefield.frequency_hz must be positive.");
 end
 
-required_truth = ["cs_map_zx","k_map_zx", ...
-    "material_id_zx","valid_mask_zx"];
-for name = required_truth
-    require_field(sample.truth, name, ...
-        "sample.truth", ...
-        "reqml:InvalidWavefieldTruth");
-end
+has_truth = isfield(sample, "truth");
 
-cs_truth_zx = double(sample.truth.cs_map_zx);
-k_truth_zx = double(sample.truth.k_map_zx);
-material_id_zx = sample.truth.material_id_zx;
-valid_mask_zx = logical(sample.truth.valid_mask_zx);
+if has_truth
+    required_truth = ["cs_map_zx","k_map_zx", ...
+        "material_id_zx","valid_mask_zx"];
 
-truth_values = {cs_truth_zx, k_truth_zx, material_id_zx, valid_mask_zx};
-truth_names = ["cs_map_zx","k_map_zx","material_id_zx","valid_mask_zx"];
-
-for index = 1:numel(truth_values)
-    if ~isequal(size(truth_values{index}), expected_size)
-        error("reqml:InvalidWavefieldTruth", ...
-            "truth.%s has an inconsistent size.", truth_names(index));
+    for name = required_truth
+        require_field(sample.truth, name, ...
+            "sample.truth", ...
+            "reqml:InvalidWavefieldTruth");
     end
-end
 
-if any(~isfinite(cs_truth_zx), "all") || any(cs_truth_zx <= 0, "all")
-    error("reqml:InvalidWavefieldTruth", ...
-        "truth.cs_map_zx must be finite and positive.");
-end
+    cs_truth_zx = double(sample.truth.cs_map_zx);
+    k_truth_zx = double(sample.truth.k_map_zx);
+    material_id_zx = sample.truth.material_id_zx;
+    valid_mask_zx = logical(sample.truth.valid_mask_zx);
 
-expected_k_zx = 2*pi*frequency_hz ./ cs_truth_zx;
-relative_k_error = max(abs(k_truth_zx(:)-expected_k_zx(:)) ./ ...
-    max(abs(expected_k_zx(:)), eps));
+    truth_values = { ...
+        cs_truth_zx, ...
+        k_truth_zx, ...
+        material_id_zx, ...
+        valid_mask_zx};
 
-if relative_k_error > 1e-5
-    error("reqml:InconsistentWavefieldTruth", ...
-        "truth.k_map_zx is inconsistent with frequency and cs.");
+    truth_names = [ ...
+        "cs_map_zx", ...
+        "k_map_zx", ...
+        "material_id_zx", ...
+        "valid_mask_zx"];
+
+    for index = 1:numel(truth_values)
+        if ~isequal(size(truth_values{index}), expected_size)
+            error("reqml:InvalidWavefieldTruth", ...
+                "truth.%s has an inconsistent size.", ...
+                truth_names(index));
+        end
+    end
+
+    if any(~isfinite(cs_truth_zx), "all") || ...
+            any(cs_truth_zx <= 0, "all")
+        error("reqml:InvalidWavefieldTruth", ...
+            "truth.cs_map_zx must be finite and positive.");
+    end
+
+    expected_k_zx = 2*pi*frequency_hz ./ cs_truth_zx;
+
+    relative_k_error = max( ...
+        abs(k_truth_zx(:)-expected_k_zx(:)) ./ ...
+        max(abs(expected_k_zx(:)), eps));
+
+    if relative_k_error > 1e-5
+        error("reqml:InconsistentWavefieldTruth", ...
+            "truth.k_map_zx is inconsistent with frequency and cs.");
+    end
+else
+    cs_truth_zx = [];
+    k_truth_zx = [];
+    material_id_zx = [];
+    valid_mask_zx = [];
 end
 
 data = struct();
@@ -140,6 +163,7 @@ data.frequency_hz = frequency_hz;
 data.quantity = string(sample.wavefield.quantity);
 data.component = string(sample.wavefield.component);
 data.units = string(sample.wavefield.units);
+data.has_truth = has_truth;
 data.truth = struct();
 data.truth.cs_m_s_zx = cs_truth_zx;
 data.truth.k_rad_m_zx = k_truth_zx;

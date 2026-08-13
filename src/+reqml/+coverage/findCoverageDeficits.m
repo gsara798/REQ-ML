@@ -1,5 +1,5 @@
 function deficits = findCoverageDeficits(summary, options)
-%FINDCOVERAGEDEFICITS Identify incomplete 4-D coverage cells.
+%FINDCOVERAGEDEFICITS Identify incomplete 5-D coverage cells.
 %
 % A cell is defined by:
 %
@@ -7,6 +7,7 @@ function deficits = findCoverageDeficits(summary, options)
 %   frequency bin
 %   purity bin
 %   diffusivity / nominal-angular-coverage bin
+%   spatial-discretization bin
 %
 % Since SWS and frequency are explicit cell dimensions, internal SWS-bin
 % and frequency-bin diversity requirements no longer apply.
@@ -22,6 +23,8 @@ arguments
 
     options.MinimumGeometrySeeds ...
         (1,1) double = 0
+
+    options.IncludeComplete (1,1) logical = false
 end
 
 validate_nonnegative_integer( ...
@@ -45,11 +48,13 @@ required = [
     "frequency_bin"
     "purity_bin"
     "diffusivity_bin"
+    "discretization_bin"
     "cell_key"
     "sws_label"
     "frequency_label"
     "purity_label"
     "diffusivity_label"
+    "discretization_label"
     "example_count"
     "independent_run_count"
     ];
@@ -69,6 +74,9 @@ deficits.required_independent_run_count = ...
         options.MinimumIndependentRuns, ...
         height(summary), ...
         1);
+
+deficits.required_independent_condition_count = ...
+    repmat(options.MinimumIndependentConditions, height(summary), 1);
 
 deficits.example_deficit = max( ...
     options.MinimumExamples - ...
@@ -144,9 +152,9 @@ deficits.deficit_score = ...
         deficits.geometry_seed_deficit, ...
         options.MinimumGeometrySeeds);
 
-deficits = deficits( ...
-    ~deficits.coverage_complete, ...
-    :);
+if ~options.IncludeComplete
+    deficits = deficits(~deficits.coverage_complete, :);
+end
 
 if ~isempty(deficits)
     deficits = sortrows( ...
@@ -157,9 +165,11 @@ if ~isempty(deficits)
             "frequency_bin"
             "purity_bin"
             "diffusivity_bin"
+            "discretization_bin"
         ], ...
         [ ...
             "descend"
+            "ascend"
             "ascend"
             "ascend"
             "ascend"

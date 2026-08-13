@@ -367,6 +367,8 @@ arguments
     options.DiffusivityEdges
     options.SwsEdges
     options.FrequencyEdges
+    options.DiscretizationPairsM (:,2) double = ...
+        [0.0005 0.0005]
 
     options.MinimumExamples = 500
     options.MinimumIndependentRuns = 5
@@ -378,14 +380,43 @@ arguments
     options.MaximumConditions = 20
     options.RealizationsPerCondition = 2
 
+    options.UseDirectedCenterSelection (1,1) logical = false
+    options.CandidateStepPixels (1,1) double = 2
+    options.MaximumCentersPerCell (1,1) double = 4
+    options.MinimumCenterDistanceFraction (1,1) double = 0.5
+    options.MinimumValidFraction (1,1) double = 1
+    options.CenterSelectionSeedOffset (1,1) double = 0
+    options.CenterSelectionMode (1,1) string = "default"
+    options.MaximumCentersPerRun (1,1) double = 12
+    options.MaximumCentersPerCellPerRun (1,1) double = 2
+    options.MinimumCenterSeparationFraction (1,1) double = 0.75
+    options.AnalyticToOpportunisticSeparationFraction (1,1) double = 0.25
+    options.DifferentCellSeparationFraction (1,1) double = 0.25
+    options.SameCellSeparationFraction (1,1) double = 0.50
+    options.UseSampleParfor (1,1) logical = false
+
     options.ParentCoverageReportHash = ""
     options.ExecutedBatchPlanFile = ""
+    options.PreviousDatasetDirectory (1,1) string = ""
+    options.PreviousCoverageReportFile (1,1) string = ""
 end
 
 iteration_directory = ...
     string(options.OutputDirectory);
 
 mkdir(iteration_directory);
+
+dataset_directory = fullfile( ...
+    iteration_directory, ...
+    "dataset");
+
+[created, message] = mkdir(dataset_directory);
+
+if ~created && ~isfolder(dataset_directory)
+    error("reqml:TestDatasetDirectoryCreateFailed", ...
+        "Could not create fake dataset directory '%s': %s", ...
+        dataset_directory, message);
+end
 
 iteration_token = extractAfter( ...
     string(options.IterationId), ...

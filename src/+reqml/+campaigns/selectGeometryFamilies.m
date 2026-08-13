@@ -4,7 +4,7 @@ function selected = selectGeometryFamilies( ...
 %
 % Geometry is not a stopping axis. This selector only avoids repeatedly
 % generating the same family when multiple families can address the same
-% purity-diffusivity deficit.
+% complete SWS-frequency-purity-angularity-discretization deficit.
 %
 % Historical support is measured using independent simulation runs rather
 % than patch counts.
@@ -20,6 +20,9 @@ arguments
         "campaign_run_id"
 
     options.PlannerSeed (1,1) double = 1
+
+    options.TrainingGeometryMode (1,1) string = ...
+        "legacy_balanced"
 end
 
 validate_options(options);
@@ -29,13 +32,24 @@ if isempty(requests)
     return
 end
 
-validate_history(assigned_examples, options);
+if options.TrainingGeometryMode == "legacy_balanced"
+    validate_history(assigned_examples, options);
+end
 
 selected = requests;
 
 for request_index = 1:numel(requests)
     request = requests(request_index);
     validate_request(request);
+
+    if options.TrainingGeometryMode == "analytic_bilayer"
+        selected(request_index).geometry_family = "bilayer";
+        selected(request_index).geometry_candidates = "bilayer";
+        selected(request_index).geometry_historical_run_counts = NaN;
+        selected(request_index).geometry_selection_basis = ...
+            "analytic_bilayer_training_mode";
+        continue
+    end
 
     candidates = eligible_families(request);
 
@@ -84,10 +98,16 @@ if isempty(examples)
 end
 
 mask = ...
+    double(examples.coverage_sws_bin) == ...
+        double(request.sws_bin) & ...
+    double(examples.coverage_frequency_bin) == ...
+        double(request.frequency_bin) & ...
     double(examples.coverage_purity_bin) == ...
         double(request.purity_bin) & ...
     double(examples.coverage_diffusivity_bin) == ...
         double(request.diffusivity_bin) & ...
+    double(examples.coverage_discretization_bin) == ...
+        double(request.discretization_bin) & ...
     logical(examples.coverage_valid) & ...
     string(examples.(options.GeometryVariable)) == family;
 
@@ -131,8 +151,11 @@ end
 function validate_history(examples, options)
 
 required = [
+    "coverage_sws_bin"
+    "coverage_frequency_bin"
     "coverage_purity_bin"
     "coverage_diffusivity_bin"
+    "coverage_discretization_bin"
     "coverage_valid"
     options.GeometryVariable
     options.RunVariable
@@ -154,9 +177,12 @@ end
 function validate_request(request)
 
 required = [
+    "sws_bin"
+    "frequency_bin"
     "purity_bin"
     "purity_range"
     "diffusivity_bin"
+    "discretization_bin"
     ];
 
 missing = setdiff( ...
@@ -173,6 +199,12 @@ end
 
 
 function validate_options(options)
+
+if ~ismember(options.TrainingGeometryMode, ...
+        ["legacy_balanced", "analytic_bilayer"])
+    error("reqml:InvalidTrainingGeometryMode", ...
+        "TrainingGeometryMode must be legacy_balanced or analytic_bilayer.");
+end
 
 if ~isfinite(options.PlannerSeed) || ...
         options.PlannerSeed < 0 || ...

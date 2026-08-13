@@ -45,6 +45,26 @@ verifyTrue(testCase, ...
 verifyTrue(testCase, ...
     ismember("medium.background_cs_m_s", paths));
 
+verifyTrue(testCase, ...
+    ismember("domain.dx_m", paths));
+
+verifyTrue(testCase, ...
+    ismember("domain.dz_m", paths));
+
+verifyEqual(testCase, ...
+    extract_override_value( ...
+        runs(1), ...
+        "domain.dx_m"), ...
+    0.00025, ...
+    AbsTol=1e-15);
+
+verifyEqual(testCase, ...
+    extract_override_value( ...
+        runs(1), ...
+        "domain.dz_m"), ...
+    0.00040, ...
+    AbsTol=1e-15);
+
 verifyFalse(testCase, ...
     any(startsWith(paths, "medium.objects")));
 
@@ -118,6 +138,72 @@ verifyNotEqual(testCase, seeds_a(1), seeds_a(2));
 end
 
 
+
+function testExportsAngularAxisWhenPresent(testCase)
+
+condition = make_condition("homogeneous");
+condition.wavefield.axis_xyz = [0.6 0 0.8];
+
+runs = reqml.campaigns. ...
+    physicalConditionToSwsynthRuns(condition);
+
+paths = string({runs(1).overrides.path})';
+index = find(paths == "directions.support.axis_xyz", 1);
+
+verifyNotEmpty(testCase, index);
+verifyEqual(testCase, ...
+    double(runs(1).overrides(index).value), ...
+    [0.6 0 0.8], ...
+    AbsTol=1e-12);
+
+end
+
+
+function testLegacyConditionDoesNotExportAngularAxis(testCase)
+
+condition = make_condition("homogeneous");
+
+runs = reqml.campaigns. ...
+    physicalConditionToSwsynthRuns(condition);
+
+paths = string({runs(1).overrides.path})';
+
+verifyFalse(testCase, ...
+    ismember("directions.support.axis_xyz", paths));
+
+end
+
+
+function testRejectsInvalidAngularAxis(testCase)
+
+condition = make_condition("homogeneous");
+condition.wavefield.axis_xyz = [0 0 0];
+
+verifyError(testCase, ...
+    @() reqml.campaigns. ...
+        physicalConditionToSwsynthRuns(condition), ...
+    "reqml:InvalidSwsynthPhysicalCondition");
+
+end
+
+
+
+function value = extract_override_value(run, path_value)
+
+paths = string({run.overrides.path})';
+index = find(paths == string(path_value), 1);
+
+if isempty(index)
+    error("test:MissingOverride", ...
+        "Override '%s' was not found.", ...
+        path_value);
+end
+
+value = run.overrides(index).value;
+
+end
+
+
 function seeds = extract_seed_values(runs)
 
 seeds = zeros(numel(runs), 1);
@@ -151,6 +237,10 @@ condition.geometry = struct( ...
 condition.material = struct( ...
     "background_cs_m_s", 2.0, ...
     "object_cs_m_s", 3.0);
+
+condition.discretization = struct( ...
+    "dx_m", 0.00025, ...
+    "dz_m", 0.00040);
 
 condition.wavefield = struct( ...
     "frequency_hz", 400, ...

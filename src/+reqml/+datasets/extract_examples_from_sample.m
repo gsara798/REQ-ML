@@ -14,16 +14,92 @@ arguments
     options.SampleId (1,1) string = "sample"
     options.StepX (1,1) double = NaN
     options.StepZ (1,1) double = NaN
+    options.CenterIndices (:,2) double = zeros(0,2)
+    options.RequestedCoverageCells table = table()
+
+    options.PurityEdges (1,:) double = zeros(1,0)
+    options.DiffusivityEdges (1,:) double = zeros(1,0)
+    options.SwsEdges (1,:) double = zeros(1,0)
+    options.FrequencyEdges (1,:) double = zeros(1,0)
+
+    options.DiscretizationPairsM (:,2) double = ...
+        [0.0005 0.0005]
+
+    options.DiffusivityValue (1,1) double = NaN
+    options.CandidateStepPixels (1,1) double = 1
+    options.MaximumCentersPerCell (1,1) double = 8
+    options.MinimumCenterDistancePixels (1,1) double = 0
+    options.MinimumValidFraction (1,1) double = 1
+    options.CenterSelectionSeed (1,1) double = 1
+
     options.StoreReqCurves (1,1) logical = false
     options.UseWindowParfor (1,1) logical = false
+    options.RequireTruth (1,1) logical = true
     options.Estimator (1,1) function_handle = ...
         @reqml.estimators.req_estimator_map
 end
 
-validate_loaded_sample(data);
+validate_loaded_sample(data, options.RequireTruth);
 validate_feature_config(feat_cfg);
 
-cfg = build_physical_config(data);
+cfg = build_physical_config(data, options.RequireTruth);
+
+if ~isempty(options.CenterIndices) && ...
+        ~isempty(options.RequestedCoverageCells)
+    error("reqml:ConflictingCenterSelectionOptions", ...
+        ["CenterIndices and RequestedCoverageCells cannot both ", ...
+         "be provided."]);
+end
+
+center_selection = table();
+center_indices = options.CenterIndices;
+estimator_feat_cfg = feat_cfg;
+
+if ~isempty(options.RequestedCoverageCells)
+    validate_coverage_center_options(options);
+
+    selection_feat_cfg = ...
+        complete_feature_config(feat_cfg);
+
+    [~, selection_feat_cfg] = ...
+        reqml.config.default_req_config( ...
+            cfg, ...
+            selection_feat_cfg);
+
+    estimator_feat_cfg = selection_feat_cfg;
+
+    center_selection = ...
+        reqml.datasets.selectCoverageCenters( ...
+            data.truth, ...
+            selection_feat_cfg.win_size, ...
+            options.RequestedCoverageCells, ...
+            PurityEdges=options.PurityEdges, ...
+            DiffusivityEdges=options.DiffusivityEdges, ...
+            SwsEdges=options.SwsEdges, ...
+            FrequencyEdges=options.FrequencyEdges, ...
+            FrequencyHz=double(data.frequency_hz), ...
+            DiffusivityValue=options.DiffusivityValue, ...
+            GridSpacingM=[ ...
+                double(data.dx_m) ...
+                double(data.dz_m)], ...
+            DiscretizationPairsM= ...
+                options.DiscretizationPairsM, ...
+            CandidateStepPixels=options.CandidateStepPixels, ...
+            MaximumPerCell=options.MaximumCentersPerCell, ...
+            MinimumCenterDistancePixels= ...
+                options.MinimumCenterDistancePixels, ...
+            MinimumValidFraction=options.MinimumValidFraction, ...
+            RandomSeed=options.CenterSelectionSeed);
+
+    if isempty(center_selection)
+        error("reqml:NoCoverageCentersSelected", ...
+            ["No valid patch centers were found for the requested ", ...
+             "coverage cells."]);
+    end
+
+    center_indices = ...
+        center_selection{:, ["cx", "cz"]};
+end
 
 estimator_args = {
     "QuantileMode", "local_req"
@@ -42,12 +118,18 @@ if isfinite(options.StepZ)
     estimator_args(end + 1, :) = {"StepZ", options.StepZ};
 end
 
+if ~isempty(center_indices)
+    estimator_args(end + 1, :) = { ...
+        "CenterIndices", ...
+        center_indices};
+end
+
 estimator_args = reshape(estimator_args.', 1, []);
 
 estimator_out = options.Estimator( ...
     data.wavefield_zx, ...
     cfg, ...
-    feat_cfg, ...
+    estimator_feat_cfg, ...
     estimator_args{:});
 
 if ~isfield(estimator_out, "feature_table") || ...
@@ -72,14 +154,16 @@ examples = attach_identifiers( ...
     options.DatasetId, ...
     options.SampleId);
 
-examples = attach_truth( ...
-    examples, ...
-    data, ...
-    estimator_out);
+if options.RequireTruth
+    examples = attach_truth( ...
+        examples, ...
+        data, ...
+        estimator_out);
 
-examples = attach_center_truth_target( ...
-    examples, ...
-    data);
+    examples = attach_center_truth_target( ...
+        examples, ...
+        data);
+end
 
 examples = movevars( ...
     examples, ...
@@ -93,6 +177,7 @@ dataset.dataset_id = options.DatasetId;
 dataset.sample_id = options.SampleId;
 dataset.examples = examples;
 dataset.estimator = estimator_out;
+dataset.center_selection = center_selection;
 dataset.sample_summary = make_summary( ...
     examples, ...
     data, ...
@@ -101,21 +186,69 @@ dataset.sample_summary = make_summary( ...
 
 end
 
-function validate_loaded_sample(data)
+function validate_coverage_center_options(options)
+
+required_edges = {
+    options.PurityEdges, "PurityEdges"
+    options.DiffusivityEdges, "DiffusivityEdges"
+    options.SwsEdges, "SwsEdges"
+    options.FrequencyEdges, "FrequencyEdges"
+    };
+
+for index = 1:size(required_edges, 1)
+    edges = required_edges{index, 1};
+    name = required_edges{index, 2};
+
+    if numel(edges) < 2
+        error("reqml:MissingCoverageCenterEdges", ...
+            "%s must contain at least two edges.", name);
+    end
+end
+
+if ~isfinite(options.DiffusivityValue)
+    error("reqml:MissingCoverageCenterDiffusivity", ...
+        ["DiffusivityValue must be finite when ", ...
+         "RequestedCoverageCells is provided."]);
+end
+
+end
+
+
+function completed = complete_feature_config(requested)
+
+completed = reqml.config.default_feature_config();
+names = string(fieldnames(requested));
+
+for index = 1:numel(names)
+    name = names(index);
+    completed.(name) = requested.(name);
+end
+
+end
+
+
+function validate_loaded_sample(data, require_truth)
 
 required = [
     "wavefield_zx"
     "dx_m"
     "dz_m"
     "frequency_hz"
-    "truth"
     ];
+
+if require_truth
+    required(end+1) = "truth";
+end
 
 for name = required.'
     if ~isfield(data, name)
         error("reqml:InvalidDatasetSample", ...
             "Loaded sample is missing '%s'.", name);
     end
+end
+
+if ~require_truth
+    return
 end
 
 truth_required = [
@@ -155,22 +288,29 @@ end
 
 end
 
-function cfg = build_physical_config(data)
+function cfg = build_physical_config(data, require_truth)
 
 cfg = struct();
 cfg.dx = double(data.dx_m);
 cfg.dz = double(data.dz_m);
 cfg.f0 = double(data.frequency_hz);
 
-valid_truth = double(data.truth.cs_m_s_zx( ...
-    logical(data.truth.valid_mask_zx)));
+if require_truth
+    valid_truth = double(data.truth.cs_m_s_zx( ...
+        logical(data.truth.valid_mask_zx)));
 
-if isempty(valid_truth)
-    error("reqml:EmptyDatasetTruth", ...
-        "No valid truth pixels are available.");
+    if isempty(valid_truth)
+        error("reqml:EmptyDatasetTruth", ...
+            "No valid truth pixels are available.");
+    end
+
+    cfg.cs_bg = median(valid_truth, "omitnan");
+else
+    % Public inference must not depend on material truth, even when truth
+    % happens to be present in the input sample.
+    cfg.cs_bg = 3;
 end
 
-cfg.cs_bg = median(valid_truth, "omitnan");
 cfg.WaveModel = resolve_wave_model(data);
 
 end
@@ -269,13 +409,10 @@ for index = 1:n
         truth_cs_max_m_s(index) = max(valid_values);
     end
 
-    valid_materials = double(material_patch(valid_patch));
-
-    if ~isempty(valid_materials)
-        dominant_id = mode(valid_materials);
-        truth_material_id_dominant(index) = dominant_id;
-        truth_material_purity(index) = mean(valid_materials == dominant_id);
-    end
+    [truth_material_purity(index), ...
+        truth_material_id_dominant(index)] = ...
+        reqml.datasets.computeMaterialPatchPurity( ...
+            material_patch, valid_patch);
 end
 
 examples.truth_cs_center_m_s = truth_cs_center_m_s;
@@ -389,15 +526,28 @@ summary = struct();
 summary.dataset_id = dataset_id;
 summary.sample_id = sample_id;
 summary.example_count = height(examples);
-summary.valid_example_count = ...
-    sum(examples.target_valid);
 summary.frequency_hz = double(data.frequency_hz);
 summary.dx_m = double(data.dx_m);
 summary.dz_m = double(data.dz_m);
 summary.wavefield_size_zx = size(data.wavefield_zx);
-summary.minimum_material_purity = min( ...
-    examples.truth_material_purity, [], "omitnan");
-summary.median_material_purity = median( ...
-    examples.truth_material_purity, "omitnan");
+
+names = string(examples.Properties.VariableNames);
+
+if ismember("target_valid", names)
+    summary.valid_example_count = ...
+        sum(examples.target_valid);
+else
+    summary.valid_example_count = NaN;
+end
+
+if ismember("truth_material_purity", names)
+    summary.minimum_material_purity = min( ...
+        examples.truth_material_purity, [], "omitnan");
+    summary.median_material_purity = median( ...
+        examples.truth_material_purity, "omitnan");
+else
+    summary.minimum_material_purity = NaN;
+    summary.median_material_purity = NaN;
+end
 
 end

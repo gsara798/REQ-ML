@@ -1,0 +1,16 @@
+{
+  "schema_name": "reqml_release_model_reference",
+  "schema_version": "1.0",
+  "public_name": "REQ Q0 model",
+  "expected_filename": "model_bundle.mat",
+  "sha256": "e3fdee81c070fbaf6a3e4c8ccdd29bd1db1a323eecfd99190d1670c707d84872",
+  "size_bytes": 681484016,
+  "internal_experiment": "homogeneous_cartesian_q0_v2",
+  "internal_model_id": "homogeneous_cartesian_q0_bagged_v2_final_frozen",
+  "supported_M": [2, 3],
+  "cs_guess_m_s": 3,
+  "training_sws_m_s": [1, 4],
+  "training_frequency_hz": [200, 600],
+  "git_head_at_freeze": "3397f185b27315e06f9bd8b798b091510caadb40",
+  "release_asset_url": "https://github.com/gsara798/REQ-ML/releases/download/v0.1.0/model_bundle.mat"
+}

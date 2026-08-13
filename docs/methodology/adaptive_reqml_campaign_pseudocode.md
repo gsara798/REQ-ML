@@ -294,6 +294,66 @@ FUNCTION run_adaptive_reqml_campaign(planner_config):
 
 ## Deficit-to-simulation mapping
 
+### Analytic bilayer with deficit-aware centers
+
+The controlled training mode specializes dataset extension as follows. The
+coverage snapshot is frozen before processing the new runs and is not updated
+inside serial or parallel workers.
+
+```text
+pre_iteration_state = complete_coverage_grid(previous_coverage_report)
+
+FOR each new analytic bilayer run:
+    W = resolve_exact_REQ_window(run.frequency, cs_guess, grid_spacing, M)
+    target = analytic_center_from_executed_batch_plan(run.condition_id)
+    candidates = [target; truth_grid_centers(step = 2)]
+
+    FOR each candidate:
+        support = exact_odd_window_support(candidate, W)
+        reject if support or valid-mask constraints fail
+        purity = compute_material_purity(actual_discrete_truth_mask(support))
+        local_sws = truth_sws_at_center(candidate)
+        achieved_cell = bin(local_sws, frequency, purity, Dnom)
+
+    selected = [target]
+    WHILE selected count < 12:
+        eligible = candidates whose achieved_cell was deficient in
+                   pre_iteration_state
+        enforce at most 2 useful centers per cell per run
+        IF final relationship-aware mode:
+            enforce target-to-opportunistic separation >= 0.25 W
+            enforce different-cell separation >= 0.25 W
+            enforce same-cell separation >= 0.50 W
+        ELSE IF V4 uniform-separation mode:
+            enforce center separation >= 0.75 W
+        choose by run deficit, condition deficit, example deficit,
+                  deficit score, never-observed status, distance,
+                  deterministic seeded tie-break
+        append choice, or stop if no candidate remains
+
+    extract exactly selected centers
+    persist role, rank, achieved cell, pre-iteration deficits,
+            purity, coordinates, distances, run_id, and condition_id
+```
+
+The target is never replaced. Multiple selected patches remain examples from
+one simulation run and one physical condition; coverage independence is still
+computed with unique `run_id` and `condition_id` values.
+
+Before final-mode materialization, place the analytic target at the low legal
+tangential edge and keep the interface-normal coordinate centered. Evaluate
+whether the normal `0.05 m x 0.05 m` domain can hold the target plus one
+additional center at `0.25 W`; select `0.07 m x 0.07 m` only when it cannot.
+Recompute the analytic interface from the selected center so the signed
+center-interface offset and discrete purity are preserved.
+
+After coverage aggregation, choose the next action from the actual residual
+deficits. Reuse a condition with increasing realization indices for run or
+example deficits, create and rematerialize a condition for a condition
+deficit, and never directly request a complete cell. Persist expected
+example, run, and condition contributions for comparison with the subsequent
+coverage report.
+
 ```text
 IF low-purity bins are deficient:
     prioritize bilayers crossing the usable ROI
@@ -407,3 +467,12 @@ These risks are controlled by:
 - retaining nominal angular aperture, direction count, effective angular bins, and in-plane fraction;
 - requiring independent runs and geometry seeds per bin;
 - using an iterative generate–measure–correct loop.
+## Geometry policy
+
+Adaptive configs may set
+`planning.training_geometry_mode = "analytic_bilayer"`. In this mode every
+requested coverage cell receives one axis-aligned bilayer condition with a
+grid-corrected interface and an exact planned patch center. See
+`analytic_bilayer_training_geometry.md` for the equations, discrete mask
+convention, feasibility rules, and audit metadata. Omitting the option keeps
+the legacy geometry-balancing behavior.

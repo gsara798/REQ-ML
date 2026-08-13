@@ -1,0 +1,159 @@
+function result = evaluateExternalQ0Cases(config_file)
+%EVALUATEEXTERNALQ0CASES Evaluate frozen Q0 on homogeneous external samples.
+
+arguments
+    config_file {mustBeTextScalar}
+end
+
+config_file=string(config_file);
+config=jsondecode(fileread(config_file));
+root=string(fileparts(fileparts(fileparts(fileparts(mfilename("fullpath"))))));
+model_file=reqml.config.resolveWorkspacePath( ...
+    string(config.model_bundle),RepositoryRoot=root);
+output_root=reqml.config.resolveWorkspacePath( ...
+    string(config.output_root),RepositoryRoot=root);
+for index=1:numel(config.cases)
+    config.cases(index).sample_file=reqml.config.resolveWorkspacePath( ...
+        string(config.cases(index).sample_file),RepositoryRoot=root);
+end
+validate_config(config,model_file,output_root);
+loaded=load(model_file,"model","model_metadata","predictor_names");
+model=loaded.model;
+predictor_names=string(loaded.predictor_names(:));
+feat_cfg=reqml.config.default_feature_config( ...
+    "M",double(config.feature_config.M), ...
+    "cs_guess",double(config.feature_config.cs_guess_m_s));
+
+prediction_parts=cell(numel(config.cases),1);
+case_rows=cell(numel(config.cases),1);
+for index=1:numel(config.cases)
+    current=config.cases(index);
+    label=string(current.label); backend=string(current.backend);
+    sample_file=string(current.sample_file);
+    data=reqml.io.load_wavefield_sample(sample_file);
+    sample=reqml.datasets.extract_examples_from_sample( ...
+        data,feat_cfg,DatasetId=string(config.evaluation_id), ...
+        SampleId=label,StepX=double(config.feature_config.step_x_px), ...
+        StepZ=double(config.feature_config.step_z_px), ...
+        StoreReqCurves=false,UseWindowParfor= ...
+        logical(config.feature_config.use_window_parfor));
+    examples=sample.examples;
+    examples.campaign_frequency_hz=repmat( ...
+        double(data.frequency_hz),height(examples),1);
+    contract=reqml.training.validate_predictor_contract( ...
+        examples,predictor_names,reqml.training.q0_predictor_registry());
+    if ~contract.valid
+        error("reqml:InvalidExternalQ0PredictorContract","%s",contract.summary);
+    end
+    X=reqml.training.build_numeric_predictor_matrix(examples,predictor_names);
+    q_pred=reqml.training.predict_regression_model( ...
+        model,X,ClipRange=[.001 .999]);
+    sws=reqml.evaluation.convert_q_predictions_to_sws(examples,q_pred);
+    predictions=make_predictions(examples,q_pred,sws,label,backend,sample_file);
+    assert_homogeneous(predictions,label);
+    prediction_parts{index}=predictions;
+    case_rows{index}=make_case_row(predictions);
+    fprintf("%s: %d patches, SWS MAPE %.4f%%, bias %.4f%%\n", ...
+        label,height(predictions),case_rows{index}.sws_mape, ...
+        case_rows{index}.sws_bias_percent);
+end
+predictions=vertcat(prediction_parts{:});
+metrics=vertcat(case_rows{:});
+paths=save_results(output_root,config_file,model_file,config, ...
+    predictions,metrics,loaded.model_metadata,predictor_names);
+result=struct("metrics",metrics,"predictions",predictions,"paths",paths);
+end
+
+
+function predictions=make_predictions(examples,q_pred,sws,label,backend,sample_file)
+n=height(examples); q_true=double(examples.q_target_from_center_truth);
+predictions=table(repmat(label,n,1),repmat(backend,n,1), ...
+    repmat(sample_file,n,1),string(examples.example_id), ...
+    repmat("external",n,1),double(examples.truth_cs_center_m_s), ...
+    double(examples.campaign_frequency_hz),double(examples.GRID_dx_m), ...
+    double(examples.GRID_dz_m),double(examples.truth_material_purity), ...
+    q_true,double(q_pred),double(q_pred)-q_true,sws.cs_pred_m_s, ...
+    sws.cs_error_m_s,sws.cs_error_percent,sws.cs_absolute_error_percent, ...
+    sws.sws_valid,VariableNames=["case_label","backend","sample_file", ...
+    "example_id","partition","cs_true_m_s","frequency_hz","dx_m", ...
+    "dz_m","truth_material_purity","q_true","q_pred","q_error", ...
+    "cs_pred_m_s","cs_error_m_s","cs_error_percent", ...
+    "cs_absolute_error_percent","sws_valid"]);
+end
+
+
+function row=make_case_row(predictions)
+row=reqml.homogeneous.summarizeQ0ByGroup(predictions, ...
+    ["backend","case_label","cs_true_m_s","frequency_hz","dx_m","dz_m"]);
+end
+
+
+function assert_homogeneous(predictions,label)
+if any(~isfinite(predictions.truth_material_purity)) || ...
+        any(abs(predictions.truth_material_purity-1)>1e-12)
+    error("reqml:ExternalQ0CaseNotHomogeneous", ...
+        "External case '%s' contains a non-homogeneous patch.",label);
+end
+if ~all(predictions.sws_valid)
+    error("reqml:InvalidExternalQ0Prediction", ...
+        "External case '%s' contains invalid SWS predictions.",label);
+end
+end
+
+
+function paths=save_results(output_root,config_file,model_file,config, ...
+        predictions,metrics,model_metadata,predictor_names)
+if ~isfolder(output_root), mkdir(output_root); end
+paths=struct("metrics",fullfile(output_root,"external_metrics.csv"), ...
+    "predictions",fullfile(output_root,"external_predictions.mat"), ...
+    "manifest",fullfile(output_root,"external_manifest.json"), ...
+    "plot",fullfile(output_root,"external_sws_error.png"));
+writetable(metrics,paths.metrics);
+save(paths.predictions,"predictions","-v7.3");
+manifest=struct("schema_name","reqml_homogeneous_q0_external_evaluation", ...
+    "schema_version","1.0","evaluation_id",string(config.evaluation_id), ...
+    "source_config",config_file,"model_bundle",model_file, ...
+    "model_metadata",model_metadata,"predictor_names",predictor_names, ...
+    "case_count",height(metrics),"patch_count",height(predictions), ...
+    "created_utc",string(datetime("now","TimeZone","UTC")));
+write_json(paths.manifest,manifest);
+figure("Visible","off");
+bar(categorical(metrics.case_label), ...
+    [metrics.sws_mape,metrics.sws_bias_percent]);
+ylabel("Percent"); legend(["MAPE","Bias"],Location="best");
+title("External homogeneous Q0 transfer"); xtickangle(25);
+exportgraphics(gcf,paths.plot,"Resolution",180); close(gcf);
+end
+
+
+function validate_config(config,model_file,output_root)
+required=["evaluation_id","model_bundle","output_root","feature_config","cases"];
+missing=setdiff(required,string(fieldnames(config)));
+if ~isempty(missing), error("reqml:InvalidExternalQ0Config", ...
+        "Missing config fields: %s",strjoin(missing,", ")); end
+if ~isfile(model_file), error("reqml:MissingExternalQ0Model", ...
+        "Model bundle does not exist: %s",model_file); end
+if contains(output_root,"scientific_5d_training")
+    error("reqml:UnsafeExternalQ0OutputPath", ...
+        "External controls must not modify scientific_5d_training outputs.");
+end
+for index=1:numel(config.cases)
+    if ~isfile(string(config.cases(index).sample_file))
+        error("reqml:MissingExternalQ0Sample", ...
+            "External sample does not exist: %s",config.cases(index).sample_file);
+    end
+end
+if double(config.feature_config.M)~=2 || ...
+        double(config.feature_config.cs_guess_m_s)~=3
+    error("reqml:InvalidExternalQ0FeatureContract", ...
+        "External Q0 controls require M=2 and cs_guess=3 m/s.");
+end
+end
+
+
+function write_json(path,value)
+fid=fopen(path,"w"); if fid<0, error("reqml:CannotWriteExternalQ0Manifest", ...
+        "Cannot write %s",path); end
+cleanup=onCleanup(@() fclose(fid));
+fprintf(fid,"%s\n",jsonencode(value,PrettyPrint=true));
+end
