@@ -24,7 +24,10 @@ verifyTrue(testCase, all(isfield(result, ...
 verifyEqual(testCase, result.metadata.M, 2);
 verifyEqual(testCase, result.metadata.cs_guess_m_s, 3);
 verifyEqual(testCase, result.metadata.frequency_hz, 400);
-verifyEqual(testCase, result.metadata.model_identifier, "test_q0_model");
+verifyEqual(testCase, result.metadata.model_name, "REQ Q0 model");
+verifyEqual(testCase, ...
+    result.metadata.model_provenance_id, ...
+    "test_q0_model");
 verifySize(testCase, result.valid_mask, size(result.cs_map));
 verifySize(testCase, result.q_map, size(result.cs_map));
 end
