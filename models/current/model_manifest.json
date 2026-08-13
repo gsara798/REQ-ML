@@ -12,5 +12,5 @@
   "training_sws_m_s": [1, 4],
   "training_frequency_hz": [200, 600],
   "git_head_at_freeze": "3397f185b27315e06f9bd8b798b091510caadb40",
-  "release_asset_url": "https://github.com/gsara798/REQ-ML/releases/download/v0.1.0/model_bundle.mat"
+  "release_asset_url": "https://github.com/gsara798/REQ-ML/releases/download/v0.2.0/model_bundle.mat"
 }

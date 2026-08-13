@@ -12,7 +12,7 @@ repository-code: "https://github.com/gsara798/REQ-ML"
 url: "https://github.com/gsara798/REQ-ML"
 license: "Apache-2.0"
 type: software
-version: "0.1.0"
+version: "0.2.0"
 keywords:
   - elastography
   - shear-wave elastography
