@@ -47,7 +47,9 @@ prediction = reqml.deployment.predictQ0Examples( ...
 [cs_map, q_map, valid_mask, x_mm, z_mm] = ...
     assemble_maps(examples, prediction);
 metadata = struct();
-metadata.model_identifier = resolve_model_identifier(bundle.model_metadata);
+metadata.model_name = "REQ Q0 model";
+metadata.model_provenance_id = ...
+    resolve_model_provenance_identifier(bundle.model_metadata);
 metadata.model_file = model_file;
 metadata.model_resolution = model_resolution.source;
 metadata.M = options.M;
@@ -80,8 +82,8 @@ z_mm = accumarray(double(e.map_iz), 1e3*double(e.z_center_m), ...
     [nz 1], @mean, NaN);
 end
 
-function identifier = resolve_model_identifier(metadata)
-identifier = "current_q0_model";
+function identifier = resolve_model_provenance_identifier(metadata)
+identifier = "";
 if isstruct(metadata) && isfield(metadata, "model_id")
     identifier = string(metadata.model_id);
 end

@@ -15,13 +15,9 @@ end
 explicit = string(options.Model);
 environment = string(getenv("REQML_Q0_MODEL"));
 packaged = fullfile(repository_root, "models", "current", "model_bundle.mat");
-development = fullfile(repository_root, "outputs", ...
-    "homogeneous_cartesian_q0_v2", "training", ...
-    "final_frozen_q0_v2", "model_bundle.mat");
 
-candidates = [explicit; environment; packaged; development];
-sources = ["Model option"; "REQML_Q0_MODEL"; ...
-    "models/current"; "development output"];
+candidates = [explicit; environment; packaged];
+sources = ["Model option"; "REQML_Q0_MODEL"; "models/current"];
 selected = find(strlength(candidates) > 0 & isfile(candidates), 1);
 if isempty(selected)
     error("reqml:Q0ModelNotFound", "%s", ...
