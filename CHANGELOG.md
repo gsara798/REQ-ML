@@ -6,7 +6,7 @@ versioning for its public software interface.
 
 ## [Unreleased]
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-08-13
 
 ### Added
 
