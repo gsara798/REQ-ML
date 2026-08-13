@@ -151,9 +151,9 @@ The sample contains:
 - wavefield component, quantity, and units
 - provenance and validation metadata
 
-Simulation-generated samples also contain ground-truth material information for
-validation. Ground truth is not used as an input predictor by the released
-model.
+Simulation-generated samples may also contain ground-truth material information
+for validation. Ground truth is optional for public inference and is not used
+by `reqml.predictSWS` to compute the SWS estimate.
 
 ## Run the public examples
 

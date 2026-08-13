@@ -34,14 +34,15 @@ arguments
 
     options.StoreReqCurves (1,1) logical = false
     options.UseWindowParfor (1,1) logical = false
+    options.RequireTruth (1,1) logical = true
     options.Estimator (1,1) function_handle = ...
         @reqml.estimators.req_estimator_map
 end
 
-validate_loaded_sample(data);
+validate_loaded_sample(data, options.RequireTruth);
 validate_feature_config(feat_cfg);
 
-cfg = build_physical_config(data);
+cfg = build_physical_config(data, options.RequireTruth);
 
 if ~isempty(options.CenterIndices) && ...
         ~isempty(options.RequestedCoverageCells)
@@ -153,14 +154,16 @@ examples = attach_identifiers( ...
     options.DatasetId, ...
     options.SampleId);
 
-examples = attach_truth( ...
-    examples, ...
-    data, ...
-    estimator_out);
+if options.RequireTruth
+    examples = attach_truth( ...
+        examples, ...
+        data, ...
+        estimator_out);
 
-examples = attach_center_truth_target( ...
-    examples, ...
-    data);
+    examples = attach_center_truth_target( ...
+        examples, ...
+        data);
+end
 
 examples = movevars( ...
     examples, ...
@@ -224,21 +227,28 @@ end
 end
 
 
-function validate_loaded_sample(data)
+function validate_loaded_sample(data, require_truth)
 
 required = [
     "wavefield_zx"
     "dx_m"
     "dz_m"
     "frequency_hz"
-    "truth"
     ];
+
+if require_truth
+    required(end+1) = "truth";
+end
 
 for name = required.'
     if ~isfield(data, name)
         error("reqml:InvalidDatasetSample", ...
             "Loaded sample is missing '%s'.", name);
     end
+end
+
+if ~require_truth
+    return
 end
 
 truth_required = [
@@ -278,22 +288,29 @@ end
 
 end
 
-function cfg = build_physical_config(data)
+function cfg = build_physical_config(data, require_truth)
 
 cfg = struct();
 cfg.dx = double(data.dx_m);
 cfg.dz = double(data.dz_m);
 cfg.f0 = double(data.frequency_hz);
 
-valid_truth = double(data.truth.cs_m_s_zx( ...
-    logical(data.truth.valid_mask_zx)));
+if require_truth
+    valid_truth = double(data.truth.cs_m_s_zx( ...
+        logical(data.truth.valid_mask_zx)));
 
-if isempty(valid_truth)
-    error("reqml:EmptyDatasetTruth", ...
-        "No valid truth pixels are available.");
+    if isempty(valid_truth)
+        error("reqml:EmptyDatasetTruth", ...
+            "No valid truth pixels are available.");
+    end
+
+    cfg.cs_bg = median(valid_truth, "omitnan");
+else
+    % Public inference must not depend on material truth, even when truth
+    % happens to be present in the input sample.
+    cfg.cs_bg = 3;
 end
 
-cfg.cs_bg = median(valid_truth, "omitnan");
 cfg.WaveModel = resolve_wave_model(data);
 
 end
@@ -509,15 +526,28 @@ summary = struct();
 summary.dataset_id = dataset_id;
 summary.sample_id = sample_id;
 summary.example_count = height(examples);
-summary.valid_example_count = ...
-    sum(examples.target_valid);
 summary.frequency_hz = double(data.frequency_hz);
 summary.dx_m = double(data.dx_m);
 summary.dz_m = double(data.dz_m);
 summary.wavefield_size_zx = size(data.wavefield_zx);
-summary.minimum_material_purity = min( ...
-    examples.truth_material_purity, [], "omitnan");
-summary.median_material_purity = median( ...
-    examples.truth_material_purity, "omitnan");
+
+names = string(examples.Properties.VariableNames);
+
+if ismember("target_valid", names)
+    summary.valid_example_count = ...
+        sum(examples.target_valid);
+else
+    summary.valid_example_count = NaN;
+end
+
+if ismember("truth_material_purity", names)
+    summary.minimum_material_purity = min( ...
+        examples.truth_material_purity, [], "omitnan");
+    summary.median_material_purity = median( ...
+        examples.truth_material_purity, "omitnan");
+else
+    summary.minimum_material_purity = NaN;
+    summary.median_material_purity = NaN;
+end
 
 end
