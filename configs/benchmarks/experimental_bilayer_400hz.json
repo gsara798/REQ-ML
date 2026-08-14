@@ -1,0 +1,16 @@
+{
+  "schema_name": "reqml_experimental_bilayer_estimator_benchmark",
+  "schema_version": "1.0",
+  "benchmark_id": "experimental_bilayer_400hz_v1",
+  "model_file": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v2/training/final_frozen_q0_v2/model_bundle.mat",
+  "output_root": "${REPOSITORY_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_v1",
+  "interface_z_m": 0.019,
+  "conditions": [
+    {"id": "H_SOFT", "sample_file": "${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz/homogeneous_soft_400hz/data/wavefield_sample.mat"},
+    {"id": "H_STIFF", "sample_file": "${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz/homogeneous_stiff_400hz/data/wavefield_sample.mat"},
+    {"id": "BILAYER", "sample_file": "${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz/bilayer_soft_stiff_400hz/data/wavefield_sample.mat"}
+  ],
+  "req": {"M": 2, "step_pixels": 1, "cs_guess_m_s": 3, "preprocessing": "raw"},
+  "theory_discrete": {"field_type": "Diffuse3D", "theory_mode": "S2D"},
+  "aia": {"M": 2, "step_pixels": 2, "cs_guess_m_s": 3, "edge_mode": "valid", "num_angles": 180, "auto_decimate": false, "use_parfor": true}
+}
