@@ -1,0 +1,56 @@
+function result = predictQ0Data(data, bundle, options)
+%PREDICTQ0DATA Apply the frozen Q0 deployment path to an in-memory sample.
+% This is the benchmark equivalent of reqml.predictSWS and deliberately
+% reuses the same feature extraction and deployment functions.
+
+arguments
+    data (1,1) struct
+    bundle (1,1) struct
+    options.M (1,1) double {mustBeMember(options.M,[2 3])} = 2
+    options.StepPixels (1,1) double {mustBeInteger,mustBePositive} = 1
+    options.UseParallel (1,1) logical = true
+end
+required=["model","model_metadata","predictor_names"];
+missing=required(~isfield(bundle,cellstr(required)));
+if ~isempty(missing)
+    error("reqml:benchmark:InvalidQ0Bundle", ...
+        "Q0 bundle is missing: %s",strjoin(missing,", "));
+end
+cs_guess=3;
+feature_config=reqml.config.default_feature_config( ...
+    M=options.M,cs_guess=cs_guess);
+dataset=reqml.datasets.extract_examples_from_sample(data,feature_config, ...
+    DatasetId="source_polarization_benchmark",SampleId="prediction", ...
+    StepX=options.StepPixels,StepZ=options.StepPixels, ...
+    StoreReqCurves=false,UseWindowParfor=options.UseParallel, ...
+    RequireTruth=false);
+examples=dataset.examples;
+examples.campaign_frequency_hz=repmat(double(data.frequency_hz), ...
+    height(examples),1);
+prediction=reqml.deployment.predictQ0Examples( ...
+    examples,bundle.model,string(bundle.predictor_names(:)));
+[cs_map,q_map,valid_mask,x_idx,z_idx,x_mm,z_mm]=assemble(examples,prediction);
+geometry=reqml.homogeneous.computePatchGeometry( ...
+    data.frequency_hz,data.dx_m,data.dz_m,M=options.M, ...
+    CsGuessMPerS=cs_guess);
+result=struct('cs_map',cs_map,'q_map',q_map,'valid_mask',valid_mask, ...
+    'x_idx',x_idx,'z_idx',z_idx,'x_mm',x_mm,'z_mm',z_mm, ...
+    'patch_examples',examples,'patch_predictions',prediction.sws, ...
+    'metadata',struct('M',options.M,'cs_guess_m_s',cs_guess, ...
+    'step_pixels',options.StepPixels, ...
+    'patch_width_pixels',geometry.patch_width_px));
+end
+
+function [cs,q,valid,x_idx,z_idx,x_mm,z_mm]=assemble(e,p)
+nz=max(double(e.map_iz)); nx=max(double(e.map_ix));
+linear=sub2ind([nz nx],double(e.map_iz),double(e.map_ix));
+cs=nan(nz,nx); q=nan(nz,nx); valid=false(nz,nx);
+cs(linear)=p.sws.cs_pred_m_s; q(linear)=p.q_pred;
+valid(linear)=p.sws.sws_valid;
+x_idx=accumarray(double(e.map_ix),double(e.cx),[nx 1],@mean,NaN).';
+z_idx=accumarray(double(e.map_iz),double(e.cz),[nz 1],@mean,NaN);
+x_mm=accumarray(double(e.map_ix),1e3*double(e.x_center_m), ...
+    [nx 1],@mean,NaN).';
+z_mm=accumarray(double(e.map_iz),1e3*double(e.z_center_m), ...
+    [nz 1],@mean,NaN);
+end

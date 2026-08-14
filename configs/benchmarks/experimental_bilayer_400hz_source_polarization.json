@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "experimental_bilayer_400hz_source_polarization_v1",
+  "output_root": "${REPOSITORY_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization_v1",
+  "simulation_root": "${SWSIM_ROOT}",
+  "model_file": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v2/training/final_frozen_q0_v2/model_bundle.mat",
+  "frequency_hz": 400,
+  "interface_z_m": 0.019,
+  "analysis_fov_m_xz": [0.0114, 0.0494, 0.0, 0.0358625],
+  "requested_source_fov_gap_m": 0.010,
+  "req": {"M": 2, "step_pixels": 1, "cs_guess_m_s": 3.0},
+  "aia": {"M": 2, "step_pixels": 2, "cs_guess_m_s": 3.0,
+    "edge_mode": "valid", "num_angles": 180, "auto_decimate": false,
+    "use_parfor": true},
+  "theory_discrete": {"field_type": "Diffuse3D", "theory_mode": "S2D"},
+  "conditions": [
+    {"id":"H_SOFT","source_polarization":"Z","true_sws_m_s":1.74,
+      "result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization/source_z_homogeneous_soft_400hz/data/result.mat"},
+    {"id":"H_STIFF","source_polarization":"Z","true_sws_m_s":3.05,
+      "result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization/source_z_homogeneous_stiff_400hz/data/result.mat"},
+    {"id":"BILAYER","source_polarization":"Z","true_sws_m_s":null,
+      "result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization/source_z_bilayer_soft_stiff_400hz/data/result.mat"},
+    {"id":"H_SOFT","source_polarization":"X","true_sws_m_s":1.74,
+      "result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization/source_x_homogeneous_soft_400hz/data/result.mat"},
+    {"id":"H_STIFF","source_polarization":"X","true_sws_m_s":3.05,
+      "result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization/source_x_homogeneous_stiff_400hz/data/result.mat"},
+    {"id":"BILAYER","source_polarization":"X","true_sws_m_s":null,
+      "result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization/source_x_bilayer_soft_stiff_400hz/data/result.mat"}
+  ],
+  "regions": [
+    {"condition":"H_SOFT","name":"central homogeneous","x_m":0.0304,"z_m":0.01793},
+    {"condition":"H_STIFF","name":"central homogeneous","x_m":0.0304,"z_m":0.01793},
+    {"condition":"BILAYER","name":"soft far","x_m":0.0304,"z_m":0.008},
+    {"condition":"BILAYER","name":"soft near","x_m":0.0304,"z_m":0.018},
+    {"condition":"BILAYER","name":"stiff near","x_m":0.0304,"z_m":0.020},
+    {"condition":"BILAYER","name":"stiff far","x_m":0.0304,"z_m":0.028}
+  ],
+  "experimental_optional": {
+    "enabled": true,
+    "homogeneous_5_percent": "/Users/sara/Library/CloudStorage/Box-Box/Research/Papers/REQ/data/Experiments/2026Feb27_homo_5perc_sp/Results_test1_400Hz/wavefield_sample_homo5_400Hz_isotropic_donut.mat",
+    "homogeneous_10_percent": "/Users/sara/Library/CloudStorage/Box-Box/Research/Papers/REQ/data/Experiments/2026Feb27_homo_10perc_sp/Results_test1_400Hz/wavefield_sample_homo10_400Hz_isotropic_donut.mat",
+    "bilayer_raw": "/Users/sara/Library/CloudStorage/Box-Box/Research/Papers/REQ/data/Experiments/2026Feb27_dl_sp_M2/Results_test1_400Hz/wavefield_sample_bilayer_400Hz_isotropic_raw.mat",
+    "bilayer_donut": "/Users/sara/Library/CloudStorage/Box-Box/Research/Papers/REQ/data/Experiments/2026Feb27_dl_sp_M2/Results_test1_400Hz/wavefield_sample_bilayer_400Hz_isotropic_donut.mat"
+  }
+}
