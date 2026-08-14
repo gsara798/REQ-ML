@@ -1,0 +1,20 @@
+{
+  "benchmark_id": "experimental_bilayer_400hz_source_zposition_v1",
+  "output_root": "${REPOSITORY_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_zposition_v1",
+  "model_file": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v2/training/final_frozen_q0_v2/model_bundle.mat",
+  "baseline_analysis_root": "${REPOSITORY_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization_v1",
+  "preflight_root": "${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_zposition/preflight",
+  "interface_z_m": 0.019,
+  "req": {"M":2,"step_pixels":1,"cs_guess_m_s":3.0},
+  "positions": [
+    {"id":"NEAR_INTERFACE","incident_material":"near interface control","result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_polarization/source_x_bilayer_soft_stiff_400hz/data/result.mat"},
+    {"id":"SOURCE_IN_SOFT","incident_material":"soft","result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_zposition/source_x_bilayer_source_in_soft_400hz/data/result.mat"},
+    {"id":"SOURCE_IN_STIFF","incident_material":"stiff","result_file":"${SWSIM_ROOT}/outputs/benchmarks/experimental_bilayer_400hz_source_zposition/source_x_bilayer_source_in_stiff_400hz/data/result.mat"}
+  ],
+  "regions": [
+    {"name":"soft far","x_m":0.0304,"z_m":0.008},
+    {"name":"soft near","x_m":0.0304,"z_m":0.018},
+    {"name":"stiff near","x_m":0.0304,"z_m":0.020},
+    {"name":"stiff far","x_m":0.0304,"z_m":0.028}
+  ]
+}
