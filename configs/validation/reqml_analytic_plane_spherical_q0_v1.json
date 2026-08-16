@@ -1,0 +1,63 @@
+{
+  "schema_name": "reqml_analytic_plane_spherical_q0_diagnostic",
+  "schema_version": "1.0",
+  "diagnostic_id": "analytic_plane_spherical_q0_v1",
+  "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework",
+  "simulation_base_config": "configs/swsynth/homogeneous_campaign_base.json",
+  "output_directory": "${REPOSITORY_ROOT}/outputs/diagnostics/analytic_plane_spherical_q0_v1",
+  "model_file": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v2/training/final_frozen_q0_v2/model_bundle.mat",
+  "frequency_hz": 400,
+  "M": 2,
+  "step_pixels": 1,
+  "cs_true_m_s": [2.0, 3.0],
+  "domain": {
+    "Lx_m": 0.05,
+    "Lz_m": 0.05,
+    "dx_m": 0.0005,
+    "dz_m": 0.0005,
+    "observation_y_m": 0.0
+  },
+  "source_radius_m": 0.05,
+  "orientations": [
+    {
+      "name": "horizontal",
+      "center_propagation_direction_xyz": [1.0, 0.0, 0.0],
+      "seed": 864201
+    },
+    {
+      "name": "diagonal",
+      "center_propagation_direction_xyz": [0.7071067811865476, 0.0, 0.7071067811865476],
+      "seed": 864202
+    }
+  ],
+  "directions": {
+    "count": 1,
+    "space": "two_dimensional",
+    "sampling_method": "explicit"
+  },
+  "sources": {
+    "phase_policy": "random_uniform",
+    "amplitude_jitter_fraction": 0.0
+  },
+  "noise_snr_db": 1000,
+  "propagation_conditions": [
+    {
+      "name": "plane",
+      "model": "plane_wave",
+      "phase_model": "local_k_distance",
+      "geometric_decay_exponent": 0
+    },
+    {
+      "name": "spherical_nospread",
+      "model": "spherical_wave",
+      "phase_model": "local_k_distance",
+      "geometric_decay_exponent": 0
+    },
+    {
+      "name": "spherical_spread",
+      "model": "spherical_wave",
+      "phase_model": "local_k_distance",
+      "geometric_decay_exponent": 1
+    }
+  ]
+}
