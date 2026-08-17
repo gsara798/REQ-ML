@@ -1,0 +1,55 @@
+{
+  "schema_name": "reqml_analytic_finite_aperture_q0_diagnostic",
+  "schema_version": "1.0",
+  "diagnostic_id": "analytic_finite_aperture_q0_v1",
+  "simulation_framework_root": "/Users/sara/local/shear-wave-simulation-framework",
+  "required_simulation_framework_commit": "6ba498c0690f96c112516632d34c336b7a67d6b3",
+  "simulation_base_config": "configs/swsynth/homogeneous_campaign_base.json",
+  "output_directory": "${REPOSITORY_ROOT}/outputs/diagnostics/analytic_finite_aperture_q0_v1",
+  "model_file": "${REPOSITORY_ROOT}/outputs/homogeneous_cartesian_q0_v2/training/final_frozen_q0_v2/model_bundle.mat",
+  "expected_model_provenance": "homogeneous_cartesian_q0_bagged_v2_final_frozen",
+  "frequency_hz": 400,
+  "M": 2,
+  "step_pixels": 1,
+  "cs_true_m_s": [2.0, 3.0],
+  "domain": {
+    "Lx_m": 0.05,
+    "Lz_m": 0.05,
+    "dx_m": 0.0005,
+    "dz_m": 0.0005,
+    "observation_y_m": 0.0
+  },
+  "source_radius_m": 0.05,
+  "source_direction_from_center_xyz": [-1.0, 0.0, 0.0],
+  "directions": {
+    "count": 1,
+    "space": "three_dimensional",
+    "sampling_method": "explicit"
+  },
+  "sources": {
+    "phase_policy": "random_uniform",
+    "amplitude_jitter_fraction": 0.0,
+    "radiation_model": "point_force_shear_far_field",
+    "aperture_axis_xyz": [0.0, 0.0, 1.0],
+    "aperture_node_spacing_m": 0.0005
+  },
+  "apertures": [
+    {"label": "point", "model": "point", "span_m": 0.0},
+    {"label": "aperture4mm", "model": "line_segment", "span_m": 0.004},
+    {"label": "aperture8mm", "model": "line_segment", "span_m": 0.008}
+  ],
+  "noise_snr_db": 1000,
+  "base_seed": 874201,
+  "geometric_decay_exponent": 0,
+  "forces": [
+    {"label": "sourcez", "direction_xyz": [0.0, 0.0, 1.0]},
+    {"label": "sourcex", "direction_xyz": [1.0, 0.0, 0.0]}
+  ],
+  "aperture_convergence": {
+    "coarse_node_spacing_m": 0.0005,
+    "fine_node_spacing_m": 0.00025,
+    "complex_correlation": 0.999976382161,
+    "optimal_scaled_shape_error": 0.006872781116,
+    "selected_node_spacing_m": 0.0005
+  }
+}
