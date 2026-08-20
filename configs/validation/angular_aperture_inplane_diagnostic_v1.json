@@ -1,0 +1,54 @@
+{
+  "schema_name": "reqml_angular_aperture_inplane_diagnostic_config",
+  "schema_version": "1.0",
+  "study_id": "angular_aperture_inplane_diagnostic_v1",
+
+  "paths": {
+    "simulation_framework_root": "${SWSIM_ROOT}",
+    "simulation_base_config": "${SWSIM_ROOT}/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
+    "output_root": "${REPOSITORY_ROOT}/outputs/validation/angular_aperture_inplane_diagnostic_v1"
+  },
+
+  "scientific_question": {
+    "description": "Quantify how the oracle REQ quantile at full-sphere angular support depends on the fraction of exactly in-plane directional components.",
+    "primary_variable": "in_plane_fraction",
+    "primary_metric": "q_oracle",
+    "use_q_theory": false
+  },
+
+  "design": {
+    "cs_m_s": [2.0, 3.0],
+    "frequency_hz": 500,
+    "direction_count": 2000,
+    "in_plane_count": [0, 20, 50, 100, 250, 500],
+    "solid_angle_fraction": 1.0,
+    "solid_angle_sr": 12.566370614359172,
+    "realizations_per_condition": 1,
+    "base_seed": 72001,
+    "condition_seed_stride": 100
+  },
+
+  "wavefield": {
+    "propagation_model": "projected3d_eikonal",
+    "direction_space": "three_dimensional",
+    "sampling_method": "fibonacci",
+    "support_type": "solid_angle_cap",
+    "support_axis_xyz": [1.0, 0.0, 0.0],
+    "phase_policy": "random_uniform",
+    "polarization_model": "transverse_random",
+    "amplitude_jitter_fraction": 0.05,
+    "snr_db": 1000
+  },
+
+  "req": {
+    "M": 2,
+    "cs_guess_m_s": 3.0,
+    "step_pixels": 2
+  },
+
+  "analysis": {
+    "compute_q_oracle": true,
+    "compute_q_pred": false,
+    "compute_q_theory": false
+  }
+}
