@@ -1,0 +1,95 @@
+{
+  "schema_name": "reqml_eikonal_validation_config",
+  "schema_version": "1.0",
+  "campaign_id": "eikonal_validation_v1",
+  "paths": {
+    "output_root": "${REPOSITORY_ROOT}/outputs/validation/eikonal_validation_v1",
+    "simulation_framework_root": "${SWSIM_ROOT}"
+  },
+  "simulation": {
+    "backend": "swsynth",
+    "resume": true,
+    "continue_on_error": false,
+    "base_config_mapping": {
+      "homogeneous": "configs/swsynth/scientific/reqml_q0_v2/homogeneous_base.json",
+      "bilayer": "configs/swsynth/scientific/reqml_q0_v2/bilayer_base.json",
+      "circular_inclusion": "configs/swsynth/scientific/reqml_q0_v2/inclusion_base.json"
+    }
+  },
+  "design": {
+    "frequencies_hz": [
+      300,
+      400,
+      500,
+      600
+    ],
+    "field_regimes": [
+      {
+        "name": "directional",
+        "direction_count": 1,
+        "in_plane_count": 1,
+        "solid_angle_sr": 0.01
+      },
+      {
+        "name": "intermediate",
+        "direction_count": 16,
+        "in_plane_count": 4,
+        "solid_angle_sr": 3.141592653589793
+      },
+      {
+        "name": "diffuse_like",
+        "direction_count": 32,
+        "in_plane_count": 8,
+        "solid_angle_sr": 12.566370614359172
+      }
+    ],
+    "homogeneous": {
+      "sws_m_s": [
+        2.0,
+        3.0,
+        4.0
+      ]
+    },
+    "heterogeneous": {
+      "background_sws_m_s": 2.0,
+      "target_sws_m_s": [
+        3.0,
+        4.0
+      ],
+      "geometries": [
+        "bilayer",
+        "circular_inclusion"
+      ]
+    },
+    "realizations": {
+      "count": 1,
+      "base_seed": 61001
+    },
+    "domain": {
+      "Lx_m": 0.07,
+      "Lz_m": 0.07
+    },
+    "bilayer_geometry": {
+      "normal_angle_rad": 0.5235987755982988,
+      "offset_m": 0.04781088913245536
+    },
+    "inclusion_geometry": {
+      "center_x_m": 0.035,
+      "center_z_m": 0.035,
+      "radius_m": 0.0175
+    }
+  },
+  "req": {
+    "M": 2,
+    "cs_guess_m_s": 3.0
+  },
+  "evaluation": {
+    "purity_edges": [
+      0.5,
+      0.7,
+      0.9,
+      0.98,
+      1.0
+    ]
+  }
+}
