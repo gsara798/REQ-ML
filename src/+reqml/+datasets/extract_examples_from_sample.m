@@ -295,6 +295,11 @@ cfg.dx = double(data.dx_m);
 cfg.dz = double(data.dz_m);
 cfg.f0 = double(data.frequency_hz);
 
+% Preserve the physical origin of cropped/extracted wavefield samples.
+% Some samples (e.g. k-Wave validation planes) do not start at x=z=0.
+cfg.x0_m = double(data.axes.x_m(1));
+cfg.z0_m = double(data.axes.z_m(1));
+
 if require_truth
     valid_truth = double(data.truth.cs_m_s_zx( ...
         logical(data.truth.valid_mask_zx)));

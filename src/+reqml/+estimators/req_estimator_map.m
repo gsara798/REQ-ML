@@ -516,8 +516,19 @@ if return_feature_table
     row.patch_idx = wi;
     row.cx = cx;
     row.cz = cz;
-    row.x_center_m = (cx - 1) * cfg.dx;
-    row.z_center_m = (cz - 1) * cfg.dz;
+    x0_m = 0;
+    z0_m = 0;
+
+    if isfield(cfg, "x0_m")
+        x0_m = double(cfg.x0_m);
+    end
+
+    if isfield(cfg, "z0_m")
+        z0_m = double(cfg.z0_m);
+    end
+
+    row.x_center_m = x0_m + (cx - 1) * cfg.dx;
+    row.z_center_m = z0_m + (cz - 1) * cfg.dz;
     row.q_local_req = q_local_i;
     row.q_pred = q_i;
     row.q_theory_discrete = NaN;
