@@ -1,0 +1,98 @@
+{
+  "schema_name": "reqml_angular_aperture_validation_config",
+  "schema_version": "1.0",
+  "study_id": "angular_aperture_validation_v1",
+  "paths": {
+    "simulation_framework_root": "${SWSIM_ROOT}",
+    "simulation_base_config": "${SWSIM_ROOT}/configs/swsynth/scientific/reqml_eikonal_training_v1/homogeneous_base.json",
+    "output_root": "${REPOSITORY_ROOT}/outputs/validation/angular_aperture_validation_v1"
+  },
+  "scientific_question": {
+    "description": "Track the learned Q0 quantile and resulting SWS continuously as projected-3D angular support increases from near-directional to full-sphere support.",
+    "primary_coordinate": "solid_angle_fraction",
+    "compare_q_pred_to_q_oracle": true,
+    "use_q_theory": false
+  },
+  "design": {
+    "cs_m_s": [
+      2.0,
+      3.0
+    ],
+    "frequency_hz": 500,
+    "direction_count": 2000,
+    "in_plane_count": 500,
+    "realizations_per_condition": 5,
+    "base_seed": 62001,
+    "condition_seed_stride": 100,
+    "solid_angle_fraction": [
+      0.0007957747154594767,
+      0.01,
+      0.04,
+      0.0625,
+      0.125,
+      0.1875,
+      0.25,
+      0.3125,
+      0.375,
+      0.4375,
+      0.5,
+      0.5625,
+      0.625,
+      0.6875,
+      0.75,
+      0.8125,
+      0.875,
+      0.9375,
+      1.0
+    ]
+  },
+  "wavefield": {
+    "propagation_model": "projected3d_eikonal",
+    "direction_space": "three_dimensional",
+    "sampling_method": "fibonacci",
+    "support_type": "solid_angle_cap",
+    "support_axis_xyz": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "phase_policy": "random_uniform",
+    "polarization_model": "transverse_random",
+    "amplitude_jitter_fraction": 0.05,
+    "snr_db": 1000
+  },
+  "req": {
+    "M": 2,
+    "cs_guess_m_s": 3.0,
+    "step_pixels": 2
+  },
+  "analysis": {
+    "compute_q_oracle": true,
+    "compute_q_theory": false,
+    "primary_x_coordinate": "solid_angle_fraction",
+    "summaries": [
+      "q_pred",
+      "q_oracle",
+      "q_error",
+      "cs_pred",
+      "sws_error_percent",
+      "absolute_error_percent"
+    ]
+  },
+  "smoke": {
+    "cases": [
+      {
+        "name": "near_directional",
+        "cs_m_s": 3.0,
+        "solid_angle_fraction": 0.0007957747154594767,
+        "realization": 1
+      },
+      {
+        "name": "intermediate",
+        "cs_m_s": 3.0,
+        "solid_angle_fraction": 0.25,
+        "realization": 1
+      }
+    ]
+  }
+}
