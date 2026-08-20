@@ -1,0 +1,102 @@
+{
+  "schema_name": "reqml_kwave_validation_config",
+  "schema_version": "1.0",
+  "study_id": "kwave_validation_v1",
+  "paths": {
+    "simulation_framework_root": "${SWSIM_ROOT}",
+    "homogeneous_base_config": "${REPOSITORY_ROOT}/configs/validation/kwave_validation_v1/homogeneous_base.json",
+    "bilayer_base_config": "${REPOSITORY_ROOT}/configs/validation/kwave_validation_v1/bilayer_base.json",
+    "inclusion_base_config_source": "${SWSIM_ROOT}/configs/kwsim/three_d/reqml_q0_v2/inclusion_base.json",
+    "inclusion_base_config": "${REPOSITORY_ROOT}/configs/validation/kwave_validation_v1/inclusion_2_4_base.json",
+    "output_root": "${REPOSITORY_ROOT}/outputs/validation/kwave_validation_v1"
+  },
+  "design": {
+    "frequencies_hz": [
+      300,
+      500
+    ],
+    "realizations_per_condition": 2,
+    "homogeneous_cs_m_s": [
+      2.0,
+      3.0,
+      4.0
+    ],
+    "bilayer": {
+      "background_cs_m_s": 2.0,
+      "stiff_cs_m_s": 3.0
+    },
+    "inclusion": {
+      "background_cs_m_s": 2.0,
+      "inclusion_cs_m_s": 4.0
+    },
+    "regimes": [
+      {
+        "name": "directional",
+        "vibrator_count": 1,
+        "exact_in_plane_sources": 1,
+        "minimum_in_plane_sources": 1,
+        "minimum_out_of_plane_sources": 0,
+        "solid_angle_sr": 0.01
+      },
+      {
+        "name": "intermediate",
+        "vibrator_count": 16,
+        "exact_in_plane_sources": 4,
+        "minimum_in_plane_sources": 4,
+        "minimum_out_of_plane_sources": 12,
+        "solid_angle_sr": 3.141592653589793
+      },
+      {
+        "name": "diffuse_like",
+        "vibrator_count": 32,
+        "exact_in_plane_sources": 8,
+        "minimum_in_plane_sources": 8,
+        "minimum_out_of_plane_sources": 24,
+        "solid_angle_sr": 12.566370614359172
+      }
+    ],
+    "seed_base": 120001,
+    "geometry_seed_base": 220001
+  },
+  "req": {
+    "primary_M": 2,
+    "cs_guess_m_s": 3.0,
+    "step_pixels": 2
+  },
+  "analysis": {
+    "compute_q_oracle": true,
+    "compute_q_pred": true,
+    "compute_q_theory": false,
+    "statistical_unit": "simulation_realization"
+  },
+  "smoke": {
+    "cases": [
+      {
+        "geometry": "homogeneous",
+        "cs_m_s": 3.0,
+        "frequency_hz": 500,
+        "regime": "directional",
+        "realization": 1
+      },
+      {
+        "geometry": "homogeneous",
+        "cs_m_s": 3.0,
+        "frequency_hz": 500,
+        "regime": "diffuse_like",
+        "realization": 1
+      },
+      {
+        "geometry": "bilayer",
+        "frequency_hz": 500,
+        "regime": "intermediate",
+        "realization": 1
+      },
+      {
+        "geometry": "inclusion",
+        "frequency_hz": 500,
+        "regime": "intermediate",
+        "realization": 1
+      }
+    ]
+  }
+}
